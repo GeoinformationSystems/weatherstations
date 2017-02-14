@@ -19,18 +19,18 @@ class PrecipitationData(models.Model):
 
     # main attributes
     year =          models.IntegerField     (default=0)
-    m01 =           models.DecimalField     (max_digits=5, decimal_places=1, null=True)
-    m02 =           models.DecimalField     (max_digits=5, decimal_places=2, null=True)
-    m03 =           models.DecimalField     (max_digits=5, decimal_places=2, null=True)
-    m04 =           models.DecimalField     (max_digits=5, decimal_places=2, null=True)
-    m05 =           models.DecimalField     (max_digits=5, decimal_places=2, null=True)
-    m06 =           models.DecimalField     (max_digits=5, decimal_places=2, null=True)
-    m07 =           models.DecimalField     (max_digits=5, decimal_places=2, null=True)
-    m08 =           models.DecimalField     (max_digits=5, decimal_places=2, null=True)
-    m09 =           models.DecimalField     (max_digits=5, decimal_places=2, null=True)
-    m10 =           models.DecimalField     (max_digits=5, decimal_places=2, null=True)
-    m11 =           models.DecimalField     (max_digits=5, decimal_places=2, null=True)
-    m12 =           models.DecimalField     (max_digits=5, decimal_places=2, null=True)
+    m01 =           models.DecimalField     (max_digits=5, decimal_places=1, null=True, blank=True)
+    m02 =           models.DecimalField     (max_digits=5, decimal_places=1, null=True, blank=True)
+    m03 =           models.DecimalField     (max_digits=5, decimal_places=1, null=True, blank=True)
+    m04 =           models.DecimalField     (max_digits=5, decimal_places=1, null=True, blank=True)
+    m05 =           models.DecimalField     (max_digits=5, decimal_places=1, null=True, blank=True)
+    m06 =           models.DecimalField     (max_digits=5, decimal_places=1, null=True, blank=True)
+    m07 =           models.DecimalField     (max_digits=5, decimal_places=1, null=True, blank=True)
+    m08 =           models.DecimalField     (max_digits=5, decimal_places=1, null=True, blank=True)
+    m09 =           models.DecimalField     (max_digits=5, decimal_places=1, null=True, blank=True)
+    m10 =           models.DecimalField     (max_digits=5, decimal_places=1, null=True, blank=True)
+    m11 =           models.DecimalField     (max_digits=5, decimal_places=1, null=True, blank=True)
+    m12 =           models.DecimalField     (max_digits=5, decimal_places=1, null=True, blank=True)
 
     # ----------------------------------------------------------------------------
     def __unicode__(self):

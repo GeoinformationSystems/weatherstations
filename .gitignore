@@ -1,2 +1,3 @@
 data/
+populate_db/migrations
 *.pyc
