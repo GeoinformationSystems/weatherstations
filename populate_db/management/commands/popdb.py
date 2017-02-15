@@ -3,13 +3,19 @@
 ################################################################################
 
 # execute me using:
-# python manage.py popdb_temperature
+# python manage.py popdb <option>
+# <option> =
+#   A = populate everything (station -> temp -> prcp)
+#   S = populate only stations (N.B: deletes temp and prcp data!)
+#   T = (re)populate only temperature
+#   P = (re)populate only precipitation
 
 ################################################################################
 # GLOBAL CONSTANTS
 ################################################################################
 
 BULK_SIZE = 1000
+NUM_MONTHS = 12
 
 
 ################################################################################
@@ -21,7 +27,7 @@ import os
 import time
 
 # django modules
-from django.core.management.base import BaseCommand, CommandError, NoArgsCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 from django.db import models, transaction
 
@@ -35,30 +41,80 @@ from populate_db.management.commands.helpers import *
 # MAIN
 ################################################################################
 
-class Command(NoArgsCommand):
-    help = 'populates the database with initial station data'
+class Command(BaseCommand):
+    help = "Populates the database with initial data. Three options \
+            A = populate everything (station -> temp -> prcp) \
+            S = populate only stations (N.B: deletes temp and prcp data!) \
+            T = (re)populate only temperature \
+            P = (re)populate only precipitation"
 
-    def handle_noargs(self, **options):
+
+    # ==========================================================================
+    # Handle additional populate options given to the command
+    # ==========================================================================
+
+    def add_arguments(self, parser):
+        # poption = populate_option :-D
+        parser.add_argument('poption', type=str, default=False)
+
+
+    # ==========================================================================
+    # MAIN
+    # ==========================================================================
+
+    def handle(self, *args, **options):
+
+        # get name of poption to be filled
+        # A = all, T = temperature, P = precipitation
+        poption = options['poption']
 
         # speedup: manual database commits in bulks
         transaction.set_autocommit(False)
 
         # cleanup
-        Station.objects.all().delete()
+        if poption == 'T':
+            station_data = StationData.objects.all()
+            for data in station_data:
+                data.temperature = None
+        elif poption == 'P':
+            station_data = StationData.objects.all()
+            for data in station_data:
+                data.precipitation = None
+        else: # poption == 'A' or 'S':
+            Station.objects.all().delete()
+
+        # populate
+        if poption == 'T':
+            self.populate_data('temperature')
+        elif poption == 'P':
+            self.populate_data('precipitation')
+        elif poption == 'S':
+            self.populate_stations()
+        else: # poption == 'A'
+            self.populate_stations()
+            self.populate_data('temperature')
+            self.populate_data('precipitation')
+
+
+    # ==========================================================================
+    # Populate database with weather stations
+    # ==========================================================================
+
+    def populate_stations(self):
 
         # COUNTRY CODES
 
         country_codes = {}
 
-        with open(get_file(INPUT_FILES['country_codes']['path'])) as in_file:
+        with open(get_file(COUNTRY_CODES['path'])) as in_file:
             for line in in_file:
                 code = get_int(
                     line,
-                    INPUT_FILES['country_codes']['characters']['code']
+                    COUNTRY_CODES['characters']['code']
                 )
                 country = get_string(
                     line,
-                    INPUT_FILES['country_codes']['characters']['country']
+                    COUNTRY_CODES['characters']['country']
                 ).title()
                 country_codes[code] = country
 
@@ -70,45 +126,39 @@ class Command(NoArgsCommand):
         total_time =        start_time
 
 
-        # read all weather stations
+        # read all weather stations and write them into the database
+        for dataset in DATASETS:
 
-        for key in INPUT_FILES:
-
-            # ignore country codes
-            if key == 'country_codes':
-                continue
-
-            # for temperature and precipitation,
-            # read the stations and write them into the database
+            stations = DATASETS[dataset]['stations']
 
             # for each weather station in file
-            with open(get_file(INPUT_FILES[key]['stations']['path'])) as in_file:
+            with open(get_file(stations['path'])) as in_file:
                 for line in in_file:
                     id = get_int(
                         line,
-                        INPUT_FILES[key]['stations']['characters']['station_id']
+                        stations['characters']['station_id']
                     )
                     lat = get_float(
                         line,
-                        INPUT_FILES[key]['stations']['characters']['lat'],
+                        stations['characters']['lat'],
                         2
                     )
                     lng = get_float(
                         line,
-                        INPUT_FILES[key]['stations']['characters']['lng'],
+                        stations['characters']['lng'],
                         2
                     )
                     elev = get_int(
                         line,
-                        INPUT_FILES[key]['stations']['characters']['elv'],
+                        stations['characters']['elv'],
                     )
                     name = get_station_name(
                         line,
-                        INPUT_FILES[key]['stations']['characters']['name']
+                        stations['characters']['name']
                     )
 
                     # data value check: elevation given?
-                    for null_value in INPUT_FILES[key]['stations']['null_values']:
+                    for null_value in stations['null_values']:
                         if str(elev) == null_value:
                             elev = None
 
@@ -144,3 +194,14 @@ class Command(NoArgsCommand):
 
         # cleanup
         transaction.set_autocommit(True)
+
+
+    # ==========================================================================
+    # Populate database with data from precipitation or temperature dataset
+    # ==========================================================================
+
+    def populate_data(self, dataset):
+
+        input_data = DATASETS[dataset]['data']
+
+        # todo: integrate from popdb_data

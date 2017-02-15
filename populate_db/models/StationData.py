@@ -18,8 +18,8 @@ class StationData(models.Model):
 
     # main attributes
     time =          models.DateField        (default='2017-01-01')
-    temperature =   models.DecimalField     (max_digits=4, decimal_places=2, null=True, blank=True)
-    precipitation = models.DecimalField     (max_digits=5, decimal_places=1, null=True, blank=True)
+    temperature =   models.DecimalField     (max_digits=4, decimal_places=2, null=True, blank=True, default=None)
+    precipitation = models.DecimalField     (max_digits=5, decimal_places=1, null=True, blank=True, default=None)
 
     # additional speedup attributes (might not be useful?)
     is_complete =   models.BooleanField     (default=False)

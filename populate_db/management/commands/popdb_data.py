@@ -1,40 +1,4 @@
 ################################################################################
-# POPULATE THE CLIMATE DATABASE WITH HISTORICAL TEMPERATURE DATA
-################################################################################
-
-# execute me using:
-# python manage.py popdb_temperature <dataset>
-# <dataset> = temperature or precipitation
-
-################################################################################
-# GLOBAL CONSTANTS
-################################################################################
-
-BULK_SIZE = 1000
-NUM_MONTHS = 12
-
-
-################################################################################
-# INCLUDES
-################################################################################
-
-# general python modules
-import os
-import time
-import importlib # try around with getattrib to call function from string
-
-# django modules
-from django.core.management.base import BaseCommand, CommandError, NoArgsCommand
-from django.conf import settings
-from django.db import models, transaction
-
-# own modules
-from populate_db.models import *
-from populate_db.management.commands.input_data import *
-from populate_db.management.commands.helpers import *
-
-
-################################################################################
 # MAIN
 ################################################################################
 

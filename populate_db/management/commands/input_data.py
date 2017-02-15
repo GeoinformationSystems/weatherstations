@@ -3,17 +3,18 @@
 # DATA FILES AND CHARACTER MAPPINGS
 ################################################################################
 
-INPUT_FILES = \
+COUNTRY_CODES = \
 {
-    'country_codes':
+    'path':       'data/meta/country_codes',
+    'characters':
     {
-        'path':       'data/meta/country_codes',
-        'characters':
-        {
-            'code':             [0,2],
-            'country':          [4,60],
-        },
+        'code':             [0,2],
+        'country':          [4,60],
     },
+}
+
+DATASETS = \
+{
     'temperature' :
     {
         'stations':
@@ -53,14 +54,6 @@ INPUT_FILES = \
                 'm12':          [107,111],
             },
         },
-        'argument_alternatives':
-        [
-            'T', 't',
-            'Tmp', 'tmp',
-            'Temp', 'temp',
-            'Temperature', 'temperature'
-        ],
-        'model_name':   'TemperatureData',
     },
     'precipitation' :
     {
@@ -101,13 +94,5 @@ INPUT_FILES = \
                 'm12':          [71,75],
             },
         },
-        'argument_alternatives':
-        [
-            'P', 'p',
-            'Prec', 'prec',
-            'Prcp', 'prcp',
-            'Precipitation', 'precipitation'
-        ],
-        'model_name':   'PrecipitationData',
     },
 }
