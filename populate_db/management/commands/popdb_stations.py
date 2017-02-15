@@ -107,6 +107,12 @@ class Command(NoArgsCommand):
                         INPUT_FILES[key]['stations']['characters']['name']
                     )
 
+                    # data value check: elevation given?
+                    for null_value in INPUT_FILES[key]['stations']['null_values']:
+                        if str(elev) == null_value:
+                            elev = None
+
+                    # get country name from country code
                     country = country_codes.get(int(str(id)[0:3]))
 
                     # test if station id is already registered in the database

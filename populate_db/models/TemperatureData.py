@@ -39,3 +39,4 @@ class TemperatureData(models.Model):
     # ----------------------------------------------------------------------------
     class Meta:
         app_label = 'populate_db'
+        ordering =  ['station', 'year']

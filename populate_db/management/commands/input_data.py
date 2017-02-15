@@ -19,6 +19,7 @@ INPUT_FILES = \
         'stations':
         {
             'path': 'data/GHCN_monthly_v3_temperature/ghcnm.tavg.v3.3.0.20170203.qca.inv',
+            'null_values':      ['-999'],
             'characters':
             {
                 'station_id':   [0,10],
@@ -66,6 +67,7 @@ INPUT_FILES = \
         'stations':
         {
             'path': 'data/GHCN_monthly_v2_precipitation/v2.prcp.inv',
+            'null_values':      ['-999'],
             'characters':
             {
                 'station_id':   [0,10],

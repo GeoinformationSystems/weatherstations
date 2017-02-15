@@ -178,7 +178,7 @@ class Command(BaseCommand):
                     intermediate_time = time.time()
 
         transaction.commit()
-        print 'FINISHED WRITING STATIONS TO DATABASE'
+        print 'FINISHED WRITING' + dataset.upper() + 'TO DATABASE'
         print_time_statistics('records', record_ctr, start_time)
 
         # cleanup
