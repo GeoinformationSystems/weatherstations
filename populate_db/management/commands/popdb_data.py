@@ -107,12 +107,15 @@ class Command(BaseCommand):
                     )
 
                     # if data has the null value, actually write null
-                    if str(this_month_value) == (INPUT_FILES[dataset]['data']['null_value']):
-                        monthly_data.append(None)
+                    is_null = False
+                    for null_value in INPUT_FILES[dataset]['data']['null_values']:
+                        if str(this_month_value) == null_value:
+                            monthly_data.append(None)
+                            is_null = True
 
                     # else: divide value by divison factor in data
                     # (converts int to float)
-                    else:
+                    if not is_null:
                         monthly_data.append(
                             float(this_month_value) / INPUT_FILES[dataset]['data']['division_factor']
                         )
@@ -124,7 +127,7 @@ class Command(BaseCommand):
                 try:
                     station = Station.objects.get(id=station_id)
 
-                except DoesNotExist:
+                except:
                     print "Related station could not be found"
                     continue
 

@@ -32,7 +32,7 @@ INPUT_FILES = \
         {
             'path': 'data/GHCN_monthly_v3_temperature/ghcnm.tavg.v3.3.0.20170203.qca.dat',
             'division_factor':  100,
-            'null_value':       '-9999',
+            'null_values':      ['-9999','-8888'],
             'characters':
             {
                 'station_id':   [0,10],
@@ -79,7 +79,7 @@ INPUT_FILES = \
         {
             'path': 'data/GHCN_monthly_v2_precipitation/v2.prcp',
             'division_factor':  10,
-            'null_value':       '-9999',
+            'null_values':      ['-9999','-8888'],
             'characters':
             {
                 'station_id':   [0,10],
