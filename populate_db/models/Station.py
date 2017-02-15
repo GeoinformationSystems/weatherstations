@@ -10,8 +10,7 @@ from django.forms.models import model_to_dict
       time span in which precipitation data is available (min and max year)
 
     ----------------------------------------------------------------------------
-    Station 1:n TemperatureData
-    Station 1:n PrecipitationData
+    Station 1:n StationData
 '''
 # ==============================================================================
 

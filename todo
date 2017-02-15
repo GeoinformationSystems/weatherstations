@@ -1,4 +1,5 @@
 to do:
-- vereinte statistik: wo fehlen temperatur oder niederschlag
-- räumliche auflösung (anzahl fehlende monate, größte lücke, anteil vollständig)
-- (vertikale betrachtung)
+- new DB structure (Station vs. StationData)
+- unified statistics for StationData: missing temperature and precipitation
+- unified statistics for Station: number of missing months, largest gap, rate of complete months
+- if necessary: vertical analysis of data (same month missing)
