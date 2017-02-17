@@ -17,6 +17,14 @@
 BULK_SIZE = 1000
 NUM_MONTHS = 12
 
+POSSIBLE_ARGUMENTS = \
+[
+    'A', 'a',   # all data
+    'S', 's',   # only stations
+    'T', 't',   # only temperature data
+    'P', 'p'    # only precipitation
+]
+
 
 ################################################################################
 # INCLUDES
@@ -68,6 +76,13 @@ class Command(BaseCommand):
         # A = all, T = temperature, P = precipitation
         poption = options['poption']
 
+        # test: is poption correct?
+        if poption not in POSSIBLE_ARGUMENTS:
+            print 'The argument you have given is not supported'
+            print 'Please add one of the following: ' \
+                    + (', '.join(POSSIBLE_ARGUMENTS))
+            return
+
         # speedup: manual database commits in bulks
         transaction.set_autocommit(False)
 
@@ -95,6 +110,9 @@ class Command(BaseCommand):
             self.populate_data('temperature')
             self.populate_data('precipitation')
 
+        # cleanup: manual database commits in bulks
+        transaction.set_autocommit(True)
+
 
     # ==========================================================================
     # Populate database with weather stations
@@ -108,11 +126,13 @@ class Command(BaseCommand):
 
         with open(get_file(COUNTRY_CODES['path'])) as in_file:
             for line in in_file:
-                code = get_int(
+                code = get_int \
+                (
                     line,
                     COUNTRY_CODES['characters']['code']
                 )
-                country = get_string(
+                country = get_string \
+                (
                     line,
                     COUNTRY_CODES['characters']['country']
                 ).title()
@@ -134,25 +154,30 @@ class Command(BaseCommand):
             # for each weather station in file
             with open(get_file(stations['path'])) as in_file:
                 for line in in_file:
-                    id = get_int(
+                    id = get_int \
+                    (
                         line,
                         stations['characters']['station_id']
                     )
-                    lat = get_float(
+                    lat = get_float \
+                    (
                         line,
                         stations['characters']['lat'],
                         2
                     )
-                    lng = get_float(
+                    lng = get_float \
+                    (
                         line,
                         stations['characters']['lng'],
                         2
                     )
-                    elev = get_int(
+                    elev = get_int \
+                    (
                         line,
                         stations['characters']['elv'],
                     )
-                    name = get_station_name(
+                    name = get_station_name \
+                    (
                         line,
                         stations['characters']['name']
                     )
@@ -172,7 +197,8 @@ class Command(BaseCommand):
 
                     # entry does not exist so far -> create it!
                     else:
-                        new_station = Station(
+                        new_station = Station \
+                        (
                             id =        id,
                             name =      name,
                             country =   country,
@@ -191,9 +217,7 @@ class Command(BaseCommand):
         transaction.commit()
         print 'FINISHED WRITING STATIONS TO DATABASE'
         print_time_statistics('stations', station_ctr, start_time)
-
-        # cleanup
-        transaction.set_autocommit(True)
+        print ''
 
 
     # ==========================================================================
@@ -204,4 +228,118 @@ class Command(BaseCommand):
 
         input_data = DATASETS[dataset]['data']
 
-        # todo: integrate from popdb_data
+        # preparation for time measurement and
+        record_ctr =        0
+        start_time =        time.time()
+        intermediate_time = start_time
+        total_time =        start_time
+
+        # for each data record in dataset
+        with open(get_file(input_data['path'])) as in_file:
+            for line in in_file:
+                station_id = get_int \
+                (
+                    line,
+                    input_data['characters']['station_id']
+                )
+                year = get_int \
+                (
+                    line,
+                    input_data['characters']['year']
+                )
+
+                # get data for each month
+                monthly_data = [None]   # skip idx [0] => data starts at [1]
+                i = 1
+                while i <= NUM_MONTHS:
+
+                    # assemble month string '1', '2', ... , '12'
+                    month_str = str(i)
+
+                    # get raw data
+                    this_month_value = get_int \
+                    (
+                        line,
+                        input_data['characters'][month_str]
+                    )
+
+                    # if data has the null value, actually write null
+                    is_null = False
+                    for null_value in input_data['null_values']:
+                        if str(this_month_value) == null_value:
+                            monthly_data.append(None)
+                            is_null = True
+
+                    # else: divide value by divison factor in data
+                    # (converts int to float)
+                    if not is_null:
+                        monthly_data.append \
+                        (
+                            float(this_month_value) / input_data['division_factor']
+                        )
+
+                    # next month
+                    i += 1
+
+                # get foreign key: station
+                try:
+                    station = Station.objects.get(id=station_id)
+
+                except:
+                    print "Related station could not be found"
+                    continue
+
+                # for each month
+                for month, value in enumerate(monthly_data):
+
+                    # ignore None (0. month)
+                    if value is None:
+                        continue
+
+                    # check if object (station->year->month) exists
+                    try:
+                        station_data = StationData.objects.get \
+                        (
+                            station=station,
+                            year=year,
+                            month=month
+                        )
+                    # if it does not exist, create it
+                    except StationData.DoesNotExist:
+                        station_data = StationData \
+                        (
+                            station=station,
+                            year=year,
+                            month=month
+                        )
+
+                    # update value for temperature / precipitation
+                    if dataset == 'temperature':
+                        station_data.temperature = value
+
+                    elif dataset == 'precipitation':
+                        station_data.precipitation = value
+
+                    # reset is_complete flag
+                    if  (station_data.temperature is None) or \
+                        (station_data.precipitation is None):
+                        station_data.is_complete = False
+                    else:
+                        station_data.is_complete = True
+
+                    # done!
+                    station_data.save()
+
+                    # go to next data
+                    record_ctr += 1
+
+                    # save each bulk with BULK_SIZE to the database
+                    if record_ctr % BULK_SIZE == 0:
+                        transaction.commit()
+                        print_time_statistics('station data', record_ctr, start_time, intermediate_time)
+                        intermediate_time = time.time()
+
+        # finalize database writing
+        transaction.commit()
+        print 'FINISHED WRITING ' + dataset.upper() + ' TO DATABASE'
+        print_time_statistics('station data', record_ctr, start_time)
