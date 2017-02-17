@@ -10,19 +10,49 @@ from django.forms.models import model_to_dict
     ----------------------------------------------------------------------------
     StationData n:1 Station
 '''
+
 # ==============================================================================
 
 class StationData(models.Model):
-    # foreign key: station
-    station =       models.ForeignKey       ('Station', related_name="station")
+
+    # foreign key
+    station = models.ForeignKey \
+    (
+        'Station',
+        related_name="station"
+    )
 
     # main attributes
-    time =          models.DateField        (default='2017-01-01')
-    temperature =   models.DecimalField     (max_digits=4, decimal_places=2, null=True, blank=True, default=None)
-    precipitation = models.DecimalField     (max_digits=5, decimal_places=1, null=True, blank=True, default=None)
+    year = models.PositiveSmallIntegerField \
+    (
+        default='2017'
+    )
+    month = models.PositiveSmallIntegerField \
+    (
+        default='1'
+    )
+    temperature = models.DecimalField \
+    (
+        max_digits=4,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=None
+    )
+    precipitation = models.DecimalField \
+    (
+        max_digits=5,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        default=None
+    )
 
     # additional speedup attributes (might not be useful?)
-    is_complete =   models.BooleanField     (default=False)
+    is_complete = models.BooleanField \
+    (
+        default=False
+    )
 
 
     # ----------------------------------------------------------------------------
@@ -36,4 +66,4 @@ class StationData(models.Model):
     # ----------------------------------------------------------------------------
     class Meta:
         app_label = 'populate_db'
-        ordering =  ['station', 'time']
+        ordering =  ['station', 'year', 'month']

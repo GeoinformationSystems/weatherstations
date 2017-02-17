@@ -12,23 +12,56 @@ from django.forms.models import model_to_dict
     ----------------------------------------------------------------------------
     Station 1:n StationData
 '''
+
 # ==============================================================================
 
 class Station(models.Model):
 
     # main attributes
-    id =            models.BigIntegerField  (primary_key=True)
-    name =          models.CharField        (max_length=32)
-    country =       models.CharField        (max_length=52)
-    lat =           models.DecimalField     (max_digits=4, decimal_places=2)
-    lng =           models.DecimalField     (max_digits=5, decimal_places=2)
-    elev =          models.IntegerField     (null=True)
+    id = models.BigIntegerField \
+    (
+        primary_key=True
+    )
+    name = models.CharField \
+    (
+        max_length=32
+    )
+    country = models.CharField \
+    (
+        max_length=52
+    )
+    lat = models.DecimalField \
+    (
+        max_digits=4,
+        decimal_places=2
+    )
+    lng = models.DecimalField \
+    (
+        max_digits=5,
+        decimal_places=2
+    )
+    elev = models.IntegerField \
+    (
+        null=True
+    )
 
-    # additional speedup attributes (might not be useful?)
-    temp_min_year = models.IntegerField     (null=True)
-    temp_max_year = models.IntegerField     (null=True)
-    prcp_min_year = models.IntegerField     (null=True)
-    prcp_max_year = models.IntegerField     (null=True)
+    # additional speedup attributes - might not be useful?)
+    temp_min_year = models.IntegerField \
+    (
+        null=True
+    )
+    temp_max_year = models.IntegerField \
+    (
+        null=True
+    )
+    prcp_min_year = models.IntegerField \
+    (
+        null=True
+    )
+    prcp_max_year = models.IntegerField \
+    (
+        null=True
+    )
 
 
     # ----------------------------------------------------------------------------
