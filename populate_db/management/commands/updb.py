@@ -88,11 +88,8 @@ class Command(BaseCommand):
 
             # find all connected station data
             # is properly ordered by 1. year 2. station (ascending)
-            t=time.time()
             station_data = StationData.objects.filter(station=station)
-            print "1", time.time()-t
 
-            t=time.time()
             # find min and max year
             min_year = station_data.aggregate(Min('year'))['year__min']
             max_year = station_data.aggregate(Max('year'))['year__max']
@@ -112,7 +109,6 @@ class Command(BaseCommand):
             curr_gap_size = 0           # size of current gap
             station_data_it = 0         # iterator in station data array
             num_station_data = station_data.count()     # number of data points
-            print "2", time.time()-t
 
             t1 = []
             t2 = []
@@ -191,8 +187,8 @@ class Command(BaseCommand):
                 gap = 0
                 currently_in_gap = False
 
-            print "3", sum(t1)
-            print "4", sum(t2)
+            print "t1", sum(t1)
+            print "t2", sum(t2)
 
             # finally write the data
             print min_year, max_year, num_missing_months, complete_data_rate, largest_gap
