@@ -5,6 +5,8 @@
 # general python modules
 import os
 import time
+import math
+from decimal import *
 
 
 ################################################################################
@@ -13,11 +15,7 @@ import time
 
 # ------------------------------------------------------------------------------
 def get_file(file_id):
-    return os.path.abspath(
-        os.path.join(
-            file_id
-    )
-)
+    return os.path.abspath(os.path.join(file_id))
 
 # ------------------------------------------------------------------------------
 def get_string(in_string, indices):
@@ -57,11 +55,12 @@ def get_station_name(in_string, indices):
     deliminator_idxs = [len(str_name_full)] # default deliminator: end of string
 
     # find double whitespace '  '
-    if str_name_full.find('  ') > -1:
+    if (str_name_full.find('  ') > -1):
         deliminator_idxs.append(str_name_full.find('  '))
 
     # find lonely opening parenthesis '('
-    if (str_name_full.find('(') > -1) and (str_name_full.find(')') == -1):
+    if  (str_name_full.find('(') > -1) and \
+        (str_name_full.find(')') == -1):
         deliminator_idxs.append(str_name_full.find('('))
 
     # get the index of the first occurence of a deliminator
@@ -72,29 +71,53 @@ def get_station_name(in_string, indices):
 
 
 # ------------------------------------------------------------------------------
-def print_time_statistics(records_name='records', record_ctr=0, start_time=0, intermediate_time=0):
+def print_time_statistics\
+    (
+        records_name='records',
+        record_ctr=0,
+        start_time=0,
+        intermediate_time=0
+    ):
+
     new_time = time.time()
+
+    # prevent division by 0 error:
+    if record_ctr == 0:
+        record_ctr = 1
 
     print_str = str(''
         + 'saved '
-        + str(record_ctr)
+        + str(record_ctr).rjust(8)
         + ' '
         + records_name
     )
 
     if intermediate_time > 0:
         print_str += str(' | '
-            + str('%.2f' % (new_time - intermediate_time))
+            + str('%.2f' % (new_time - intermediate_time)).rjust(5)
             + ' s'
         )
+    else:
+        print_str += str(' | '
+            + ''.rjust(5)
+            + '  '
+        )
+
+    total_time_s = new_time - start_time
+    total_h = int(math.floor(total_time_s / (60 * 60)))
+    leftover_time_s = total_time_s - math.floor(total_h*60*60)
+    total_m = int(math.floor(leftover_time_s / 60))
+    total_s = leftover_time_s - math.floor(total_m*60)
 
     print_str += str(' | total: '
-        + str('%.2f' % (new_time - start_time))
-        + ' s | '
-        + ' time per 1000 '
-        + records_name
+        + str(total_h).zfill(2).rjust(2)
+        + ':'
+        + str(total_m).zfill(2).rjust(2)
+        + ':'
+        + str('%05.2f' % total_s).rjust(5)
+        + ' | time / 1000 '
         + ': '
-        + str('%.2f' % ( 1000 * (new_time-start_time) / (record_ctr) ) )
+        + str('%.2f' % (1000*(new_time-start_time)/(record_ctr))).rjust(5)
         + ' s'
     )
 

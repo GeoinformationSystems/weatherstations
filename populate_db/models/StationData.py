@@ -27,10 +27,12 @@ class StationData(models.Model):
     (
         default='2017'
     )
+
     month = models.PositiveSmallIntegerField \
     (
         default='1'
     )
+
     temperature = models.DecimalField \
     (
         max_digits=4,
@@ -39,6 +41,7 @@ class StationData(models.Model):
         blank=True,
         default=None
     )
+
     precipitation = models.DecimalField \
     (
         max_digits=5,
@@ -57,10 +60,16 @@ class StationData(models.Model):
 
     # ----------------------------------------------------------------------------
     def __unicode__(self):
-        return str(
-            self.station + '|' +
-            self.datetime.year + '-' +
-            self.datetime.month
+        if self.month > 10:
+            month_pad = ''
+        else:
+            month_pad = '0'
+        return str \
+        (
+            str(self.station) + '|' +
+            str(self.year) + '-' +
+            month_pad +
+            str(self.month)
         )
 
     # ----------------------------------------------------------------------------

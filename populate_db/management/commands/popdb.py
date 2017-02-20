@@ -87,16 +87,34 @@ class Command(BaseCommand):
         transaction.set_autocommit(False)
 
         # cleanup
-        if poption == 'T':
+        num_station_data = StationData.objects.count()
+        if (poption == 'T') or (poption == 'P'):
             station_data = StationData.objects.all()
+            cleanup_ctr = 0
             for data in station_data:
-                data.temperature = None
-        elif poption == 'P':
-            station_data = StationData.objects.all()
-            for data in station_data:
-                data.precipitation = None
+                if poption == 'T':
+                    data.temperature = None
+                else: # poption == 'P'
+                    data.precipitation = None
+                data.is_complete = False
+                data.save()
+                cleanup_ctr += 1
+                if cleanup_ctr % BULK_SIZE == 0:
+                    transaction.commit()
+                    print\
+                    (
+                        str(cleanup_ctr).rjust(8)
+                        + ' records cleaned ('
+                        + str('%05.2f' % (100*float(cleanup_ctr)/float(num_station_data)))
+                        + ' %)'
+                    )
+            transaction.commit()
+
         else: # poption == 'A' or 'S':
             Station.objects.all().delete()
+            # also automatically deletes StationData!
+
+        print 'FINISHED CLEANING DATABASE\n'
 
         # populate
         if poption == 'T':
@@ -153,29 +171,35 @@ class Command(BaseCommand):
 
             # for each weather station in file
             with open(get_file(stations['path'])) as in_file:
+
                 for line in in_file:
+
                     id = get_int \
                     (
                         line,
                         stations['characters']['station_id']
                     )
+
                     lat = get_float \
                     (
                         line,
                         stations['characters']['lat'],
                         2
                     )
+
                     lng = get_float \
                     (
                         line,
                         stations['characters']['lng'],
                         2
                     )
+
                     elev = get_int \
                     (
                         line,
                         stations['characters']['elv'],
                     )
+
                     name = get_station_name \
                     (
                         line,
@@ -211,12 +235,23 @@ class Command(BaseCommand):
                         station_ctr += 1
                         if station_ctr % BULK_SIZE == 0:
                             transaction.commit()
-                            print_time_statistics('stations', station_ctr, start_time, intermediate_time)
+                            print_time_statistics\
+                            (
+                                'stations',
+                                station_ctr,
+                                start_time,
+                                intermediate_time
+                            )
                             intermediate_time = time.time()
 
         transaction.commit()
-        print 'FINISHED WRITING STATIONS TO DATABASE'
-        print_time_statistics('stations', station_ctr, start_time)
+        print '\nFINISHED WRITING STATIONS TO DATABASE'
+        print_time_statistics \
+        (
+            'stations',
+            station_ctr,
+            start_time
+        )
         print ''
 
 
@@ -336,10 +371,22 @@ class Command(BaseCommand):
                     # save each bulk with BULK_SIZE to the database
                     if record_ctr % BULK_SIZE == 0:
                         transaction.commit()
-                        print_time_statistics('station data', record_ctr, start_time, intermediate_time)
+                        print_time_statistics \
+                        (
+                            dataset + ' data',
+                            record_ctr,
+                            start_time,
+                            intermediate_time
+                        )
                         intermediate_time = time.time()
 
         # finalize database writing
         transaction.commit()
-        print 'FINISHED WRITING ' + dataset.upper() + ' TO DATABASE'
-        print_time_statistics('station data', record_ctr, start_time)
+        print '\nFINISHED WRITING ' + dataset.upper() + ' TO DATABASE'
+        print_time_statistics \
+        (
+            dataset + ' data',
+            record_ctr,
+            start_time
+        )
+        print '\n\n'

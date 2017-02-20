@@ -31,11 +31,6 @@ from populate_db.management.commands.helpers import *
 # GLOBAL CONSTANTS
 ################################################################################
 
-DATASETS = [
-    ['temperature',     TemperatureData],
-    ['precipitation',   PrecipitationData],
-]
-
 MONTHS = \
 [
     ['m01', 'Jan'], ['m02', 'Feb'], ['m03', 'Mar'],
@@ -54,9 +49,9 @@ MAX_LNG = 180
 # number of characters for maxmimum length of ... for the statistics
 JUST_WIDTH = \
 {
-    'description':  40, # maximum length of describing text
-    'number':       10, # maximum length of number
-    'rate':         8,  # maximum length of rate [%]
+    'description':  40,     # maximum length of describing text
+    'number':       10,     # maximum length of number
+    'rate':         8,      # maximum length of rate [%]
 }
 
 
@@ -165,133 +160,128 @@ class Command(BaseCommand):
         # TEMPERATURE AND PRECIPITATION DATA
         # ======================================================================
 
-        for dataset in DATASETS:
+        print_header("WEATHER DATA")
 
-            print_header(dataset[0].upper() + " DATA")
+        # reference values
+        num_records = StationData.objects.count()
 
-            # reference values
-            num_records = dataset[1].objects.count()
+        # number of stations
+        print_stat(
+            "total station data records",
+            num_records,
+            num_records
+        )
 
-            num_months = num_records * 12
+        # earliest (min) and latest (max) year of record
+        min_year = StationData.objects.all().aggregate(Min('year'))['year__min']
+        max_year = StationData.objects.all().aggregate(Max('year'))['year__max']
 
-            # number of stations
+        print_stat(
+            "minimum year",
+            min_year,
+            None
+        )
+        print_stat(
+            "maximum year",
+            max_year,
+            None
+        )
+
+        # coverage of months in year
+        print_line()
+        print_stat(
+            "total number of monthly data records",
+            num_months,
+            num_months
+        )
+
+        empty_records = 0
+        for month in MONTHS:
+            kwargs = {'{0}'.format(month[0]): None}
+            empty_months = dataset[1].objects.filter(**kwargs).count()
             print_stat(
-                "total " + dataset[0] + " data records",
-                num_records,
+                "  complete data for " + month[1],
+                num_records - empty_months,
                 num_records
             )
+            empty_records += empty_months
 
-            # earliest (min) and latest (max) year of record
-            min_year = dataset[1].objects.all().aggregate(Min('year'))['year__min']
-            max_year = dataset[1].objects.all().aggregate(Max('year'))['year__max']
+        print_stat(
+            "complete monthly data records",
+            num_months - empty_records,
+            num_months
+        )
 
-            print_stat(
-                "minimum year",
-                min_year,
-                None
-            )
-            print_stat(
-                "maximum year",
-                max_year,
-                None
-            )
+        # count gaps (number of consecutive months with missing data)
+        gaps = [0]*(MAX_GAP+1) # MAGIC! initialize list with n 0-elements
 
+        # for each Station
+        # for station in Station.objects.filter(name='Tillabery'):
+        for station in Station.objects.all():
 
-            # coverage of months in year
-            print_line()
-            print_stat(
-                "total number of monthly data records",
-                num_months,
-                num_months
-            )
+            # get all monthly data for this station
+            data_records = dataset[1].objects.filter(station=station)
 
-            empty_records = 0
-            for month in MONTHS:
-                kwargs = {'{0}'.format(month[0]): None}
-                empty_months = dataset[1].objects.filter(**kwargs).count()
-                print_stat(
-                    "  complete data for " + month[1],
-                    num_records - empty_months,
-                    num_records
-                )
-                empty_records += empty_months
+            # compile consective list of monthly data values
+            data_list = []
+            for data_record in data_records:
+                for month in MONTHS:
+                    dec = getattr(data_record,month[0])
+                    if not dec is None:
+                        dec = float(dec)
+                    data_list.append(dec)
 
-            print_stat(
-                "complete monthly data records",
-                num_months - empty_records,
-                num_months
-            )
+            # strip list left and right
+            #  -> not necessary, because the visualization also has to
+            # deal with missing data in the beginning / end of a year
 
-            # count gaps (number of consecutive months with missing data)
-            gaps = [0]*(MAX_GAP+1) # MAGIC! initialize list with n 0-elements
+            # identify gaps
+            in_gap = False
+            gap = 0
+            for value in data_list:
 
-            # for each Station
-            # for station in Station.objects.filter(name='Tillabery'):
-            for station in Station.objects.all():
-
-                # get all monthly data for this station
-                data_records = dataset[1].objects.filter(station=station)
-
-                # compile consective list of monthly data values
-                data_list = []
-                for data_record in data_records:
-                    for month in MONTHS:
-                        dec = getattr(data_record,month[0])
-                        if not dec is None:
-                            dec = float(dec)
-                        data_list.append(dec)
-
-                # strip list left and right
-                #  -> not necessary, because the visualization also has to
-                # deal with missing data in the beginning / end of a year
-
-                # identify gaps
-                in_gap = False
-                gap = 0
-                for value in data_list:
-
-                    # 4 cases:
-                    # 1) currently in a gap
-                    if in_gap:
-                        # 1.1) gap continues -> increment!
-                        if value is None:
-                            gap += 1
-                        # 1.2) gap ended -> finalize!
-                        # -> gap size n has one more occurence
-                        else:
-                            gaps[gap] += 1
-                            gap = 0
-                            in_gap = False
-                    # 2) currently not in a gap
-                    else:
-                        # 2.1) gap found -> start new gap
-                        if value is None:
-                            gap = 1
-                            in_gap = True
-                        # 2.2) no gap found -> conitinue!
-                        else:
-                            pass
-
-                # border case: if gap reached all the way to the end, finalize again
+                # 4 cases:
+                # 1) currently in a gap
                 if in_gap:
-                    gaps[gap] += 1
-                    gap = 0
-                    in_gap = False
+                    # 1.1) gap continues -> increment!
+                    if value is None:
+                        gap += 1
+                    # 1.2) gap ended -> finalize!
+                    # -> gap size n has one more occurence
+                    else:
+                        gaps[gap] += 1
+                        gap = 0
+                        in_gap = False
+                # 2) currently not in a gap
+                else:
+                    # 2.1) gap found -> start new gap
+                    if value is None:
+                        gap = 1
+                        in_gap = True
+                    # 2.2) no gap found -> conitinue!
+                    else:
+                        pass
 
-            # print gaps
-            num_gaps = sum(gaps)
+            # border case: if gap reached all the way to the end, finalize again
+            if in_gap:
+                gaps[gap] += 1
+                gap = 0
+                in_gap = False
 
-            print_line()
-            print_stat(
-                "total number of gaps",
-                num_gaps,
-                num_gaps
-            )
+        # print gaps
+        num_gaps = sum(gaps)
 
-            for gap_size, gaps_of_size in enumerate(gaps):
-                if gaps_of_size > 0:
-                    print_stat(
-                        "  number of gaps with size " + str(gap_size),
-                        gaps_of_size,
-                        num_gaps
-                    )
+        print_line()
+        print_stat(
+            "total number of gaps",
+            num_gaps,
+            num_gaps
+        )
+
+        for gap_size, gaps_of_size in enumerate(gaps):
+            if gaps_of_size > 0:
+                print_stat(
+                    "  number of gaps with size " + str(gap_size),
+                    gaps_of_size,
+                    num_gaps
+                )

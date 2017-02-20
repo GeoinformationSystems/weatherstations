@@ -22,46 +22,68 @@ class Station(models.Model):
     (
         primary_key=True
     )
+
     name = models.CharField \
     (
         max_length=32
     )
+
     country = models.CharField \
     (
         max_length=52
     )
+
     lat = models.DecimalField \
     (
         max_digits=4,
         decimal_places=2
     )
+
     lng = models.DecimalField \
     (
         max_digits=5,
         decimal_places=2
     )
+
     elev = models.IntegerField \
     (
         null=True
     )
 
     # additional speedup attributes - might not be useful?)
-    temp_min_year = models.IntegerField \
+
+    ## temporal interval in which data is available for this station
+    ## -> minimum and maximum year
+    min_year = models.IntegerField \
     (
-        null=True
+        default=9999
     )
-    temp_max_year = models.IntegerField \
+
+    max_year = models.IntegerField \
     (
-        null=True
+        default=-9999
     )
-    prcp_min_year = models.IntegerField \
+
+    ## total number of months that miss either temperature or precipitation data
+    missing_months = models.IntegerField \
     (
-        null=True
+        default=0
     )
-    prcp_max_year = models.IntegerField \
+
+    ## percentage of months that are covered (i.e. not missing) = [0 .. 1]
+    complete_data_rate = models.DecimalField \
     (
-        null=True
+        default=1.0,
+        max_digits=3,
+        decimal_places=2
     )
+
+    # largest number of consecutive missing months
+    largest_gap = models.IntegerField \
+    (
+        default=0
+    )
+
 
 
     # ----------------------------------------------------------------------------
@@ -71,3 +93,4 @@ class Station(models.Model):
     # ----------------------------------------------------------------------------
     class Meta:
         app_label = 'populate_db'
+        ordering =  ['id']
