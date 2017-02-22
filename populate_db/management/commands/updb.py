@@ -19,14 +19,6 @@ BULK_SIZE = 1000
 
 # number of months in a year
 NUM_MONTHS = 12
-MONTHS = \
-[
-    ['m01', 'Jan'], ['m02', 'Feb'], ['m03', 'Mar'],
-    ['m04', 'Apr'], ['m05', 'May'], ['m06', 'Jun'],
-    ['m07', 'Jul'], ['m08', 'Aug'], ['m09', 'Sep'],
-    ['m10', 'Oct'], ['m11', 'Nov'], ['m12', 'Dec']
-]
-
 
 # max. possible number of gaps (consecutive months with missing data) to count
 MAX_GAP = 10000
