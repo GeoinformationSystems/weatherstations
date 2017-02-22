@@ -3,25 +3,15 @@
 ################################################################################
 
 # execute me using:
-# python manage.py updb
+# python manage.py merge_stations
 
 
 ################################################################################
-# GLOBAL CONSTANTS
+# CONSTANTS
 ################################################################################
 
 # check only limited set of data
 TEST_RUN = False
-
-# size of consecutive database queries that are executed at once
-# optimal: [1000 .. 5000]
-BULK_SIZE = 1000
-
-# number of months in a year
-NUM_MONTHS = 12
-
-# max. possible number of gaps (consecutive months with missing data) to count
-MAX_GAP = 10000
 
 
 ################################################################################

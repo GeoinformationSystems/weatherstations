@@ -3,7 +3,7 @@
 ################################################################################
 
 # execute me using:
-# python manage.py popdb <option>
+# python manage.py load_data <option>
 # <option> =
 #   A = populate everything (station -> temp -> prcp)
 #   S = populate only stations (N.B: deletes temp and prcp data!)
@@ -13,9 +13,6 @@
 ################################################################################
 # GLOBAL CONSTANTS
 ################################################################################
-
-BULK_SIZE = 1000
-NUM_MONTHS = 12
 
 POSSIBLE_ARGUMENTS = \
 [

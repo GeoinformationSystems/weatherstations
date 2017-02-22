@@ -3,8 +3,7 @@
 ################################################################################
 
 # execute me using:
-# python manage.py stats
-# <dataset> = temperature or precipitation
+# python manage.py statistics
 
 
 ################################################################################
@@ -30,21 +29,6 @@ from populate_db.management.commands.helpers import *
 ################################################################################
 # GLOBAL CONSTANTS
 ################################################################################
-
-MONTHS = \
-[
-    ['m01', 'Jan'], ['m02', 'Feb'], ['m03', 'Mar'],
-    ['m04', 'Apr'], ['m05', 'May'], ['m06', 'Jun'],
-    ['m07', 'Jul'], ['m08', 'Aug'], ['m09', 'Sep'],
-    ['m10', 'Oct'], ['m11', 'Nov'], ['m12', 'Dec']
-]
-
-# maximum number of gaps (consecutive months with missing data) to count
-MAX_GAP = 1000
-
-# extend of geographic coordinate system
-MAX_LAT = 90
-MAX_LNG = 180
 
 # number of characters for maxmimum length of ... for the statistics
 JUST_WIDTH = \
