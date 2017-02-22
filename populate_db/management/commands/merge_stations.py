@@ -1,5 +1,5 @@
 ################################################################################
-# UPDATE THE CLIMATE DATABASE (STATIONS) WITH STATISTICALLY RELEVANT DATA
+# MERGE STATION DUPLICATES
 ################################################################################
 
 # execute me using:
@@ -39,12 +39,8 @@ from populate_db.management.commands.helpers import *
 ################################################################################
 
 class Command(BaseCommand):
-    help = "Updates the Stations in the climate database with statistically \
-            relevant data: \
-            - min_year and max_year: first and last year of weather data \
-            - missing_months: total number of months that miss either T or P \
-            - complete_data_rate: percentage of months that are covered \
-            - largest_gap: largest number of consecutive missing months"
+    help = "Identify duplicates among the stations based on their id and their \
+            geographic location and merge them"
 
 
     # ==========================================================================

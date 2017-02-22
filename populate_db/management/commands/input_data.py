@@ -91,9 +91,9 @@ DATASETS = \
             'characters':
             {
                 'station_id':   [0,10],
-                'lat':          [44,48],
-                'lng':          [50,57],
-                'elv':          [58,61],
+                'lat':          [43,48],
+                'lng':          [50,56],
+                'elv':          [57,61],
                 'name':         [12,42],    # N.B. a country name can be inside
             },
         },
