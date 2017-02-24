@@ -8,6 +8,9 @@ import time
 import math
 from decimal import *
 
+# global constants
+from populate_db.management.commands.input_data import *
+
 
 ################################################################################
 # HELPER FUNCTIONS
@@ -68,11 +71,10 @@ def get_station_name(in_string, indices):
 
     return str_name_full[0:deliminator_idxs[0]].strip().title()
 
-
-
 # ------------------------------------------------------------------------------
 def print_time_statistics\
     (
+        operation_name='saved',
         records_name='records',
         record_ctr=0,
         start_time=0,
@@ -81,12 +83,8 @@ def print_time_statistics\
 
     new_time = time.time()
 
-    # prevent division by 0 error:
-    if record_ctr == 0:
-        record_ctr = 1
-
     print_str = str(''
-        + 'saved '
+        + operation_name
         + str(record_ctr).rjust(8)
         + ' '
         + records_name
@@ -109,6 +107,12 @@ def print_time_statistics\
     total_m = int(math.floor(leftover_time_s / 60))
     total_s = leftover_time_s - math.floor(total_m*60)
 
+    # prevent division by 0 error:
+    if record_ctr == 0:
+        time_per_thousand = 0
+    else:
+        time_per_thousand = 1000*(new_time-start_time)/(record_ctr)
+
     print_str += str(' | total: '
         + str(total_h).zfill(2).rjust(2)
         + ':'
@@ -117,7 +121,7 @@ def print_time_statistics\
         + str('%05.2f' % total_s).rjust(5)
         + ' | time / 1000 '
         + ': '
-        + str('%.2f' % (1000*(new_time-start_time)/(record_ctr))).rjust(5)
+        + str('%.2f' % time_per_thousand).rjust(5)
         + ' s'
     )
 

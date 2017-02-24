@@ -13,6 +13,9 @@
 # check only limited set of data
 TEST_RUN = False
 
+# maximum distance between two stations with the same id
+# to say that they are "the same" / have only slightly moved
+DISTANCE_THRESHOLD = 2.0 # [km]
 
 ################################################################################
 # INCLUDES
@@ -21,6 +24,7 @@ TEST_RUN = False
 # general python modules
 import os
 import time
+from haversine import haversine
 
 # django modules
 from django.core.management.base import BaseCommand, CommandError
@@ -44,6 +48,13 @@ class Command(BaseCommand):
 
 
     # ==========================================================================
+    # MERGE TWO STATION DATA
+    # ==========================================================================
+
+    def merge_stations(self, A, B):
+        print A.name, B.name
+
+    # ==========================================================================
     # MAIN
     # ==========================================================================
 
@@ -58,101 +69,69 @@ class Command(BaseCommand):
         intermediate_time = start_time
         total_time =        start_time
 
-        # for each Station
+        # get all countries which have stations
+        ## use a set to avoid duplicates
+        countries = set()
         for station in Station.objects.all():
+            countries.add(station.country)
 
-            # find all connected station data
-            # is properly ordered by 1. year 2. station (ascending)
-            station_datas = StationData.objects.filter(station=station)
+        distances = [0]*500
 
-            # find min and max year
-            min_year = station_datas.aggregate(Min('year'))['year__min']
-            max_year = station_datas.aggregate(Max('year'))['year__max']
+        # find duplicates among stations in one country
+        for country in countries:
 
-            # get total number of months that lack either temp or prcp data
-            missing_months = station_datas.filter(is_complete=False)
+            # test run
+            if (TEST_RUN) and (country != 'Algeria'): continue
 
-            # get percentage of complete months
-            num_months = station_datas.count()
-            num_missing_months = missing_months.count()
-            complete_data_rate = float(num_months-num_missing_months) / float(num_months)
+            ## get all stations in this country
+            stations_in_country = Station.objects.filter(country=country)
 
-            # identify gaps = consecutive missing months
-            gaps = [0]*(MAX_GAP+1)      # final list: number of gaps per gap size
-            largest_gap = 0             # largest gap found so far
-            currently_in_gap = False    # currently in a gap
-            curr_gap_size = 0           # size of current gap
-
-            ## create consecutive list of monthly data: is data complete?
-            ## structure: [min_year/Jan, min_year/Feb, ..., max_yar/Dec]
-            monthly_completion_list = [0]*((max_year-min_year+1)*NUM_MONTHS)
-
-            ## for each station data point
-            for station_data in station_datas:
-
-                # get index for monthly_completion_list
-                idx = ((station_data.year - min_year)*NUM_MONTHS) + station_data.month-1
-
-                # add information to list: is data point complete?
-                monthly_completion_list[idx] = station_data.is_complete
-
-            ## for each monthly completion data value (= is it a gap?)
-            for month_complete in monthly_completion_list:
-
-                ## if it is a gap, count the gap size. 4 cases:
-                if currently_in_gap:
-
-                    ## 1) currently in a gap and gap continues => increment!
-                    if not month_complete:
-                        gap += 1
-
-                    ## 2) currently in a gap and gap ended => finalize!
-                    ## -> gap size n has one more occurence
-                    else:
-                        gaps[gap] += 1
-                        largest_gap = max(largest_gap, gap)
-                        gap = 0
-                        currently_in_gap = False
-
-                else:
-
-                    ## 3) currently not in a gap and gap found => start gap
-                    if not month_complete:
-                        gap = 1
-                        currently_in_gap = True
-
-                    ## 4) currently not in a gap and no gap found => continue!
-                    else: pass
-
-            # finalize last gap
-            if currently_in_gap:
-                gaps[gap] += 1
-                largest_gap = max(largest_gap, gap)
-                gap = 0
-                currently_in_gap = False
+            ## find duplicates
+            i = 0
+            j = 1
+            end = len(stations_in_country)-1
 
 
-            # finally write the data
-            station.min_year =              min_year
-            station.max_year =              max_year
-            station.missing_months =        num_missing_months
-            station.complete_data_rate =    complete_data_rate
-            station.largest_gap =           largest_gap
-            station.save()
+            while i < end:
+                j = i+1
+                while j < end:
 
-            # session and time management
-            station_ctr += 1
-            if station_ctr % BULK_SIZE == 0:
-                transaction.commit()
-                print_time_statistics('stations', station_ctr, start_time, intermediate_time)
-                intermediate_time = time.time()
+                    ## get stations
+                    A = stations_in_country[i]
+                    B = stations_in_country[j]
 
-                if TEST_RUN: return
+                    ## check if first 8 digits of id are the same
+                    ## -> because last three digits might be increments of
+                    ##    the same station that has moved or so...
+                    if (str(A.id)[0:7] == str(B.id)[0:7]):
+
+                        ## check if the distance between both stations is small
+                        ## -> because it could be the station has slightly moved
+                        A_coords = (A.lat, A.lng)
+                        B_coords = (B.lat, B.lng)
+                        dist = haversine(A_coords, B_coords)
+
+                        dist_idx = int(round(dist*10))
+                        if dist_idx < 500:
+                            distances[dist_idx] += 1
+
+                        if (d < DISTANCE_THRESHOLD):
+
+                            ## merge station data
+                            self.merge_stations(A, B)
+
+                    ## check next station
+                    j += 1
+                i += 1
+
+        print distances
+
+
 
         # finalize
         transaction.commit()
         print 'FINISHED UPDATING DATABASE'
-        print_time_statistics('stations', station_ctr, start_time)
+        print_time_statistics('updated', 'stations', station_ctr, start_time)
         print ''
 
         # cleanup: manual database commits in bulks

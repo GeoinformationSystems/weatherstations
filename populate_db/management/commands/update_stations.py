@@ -148,7 +148,7 @@ class Command(BaseCommand):
             station_ctr += 1
             if station_ctr % BULK_SIZE == 0:
                 transaction.commit()
-                print_time_statistics('stations', station_ctr, start_time, intermediate_time)
+                print_time_statistics('updated', 'stations', station_ctr, start_time, intermediate_time)
                 intermediate_time = time.time()
 
                 if TEST_RUN: return
@@ -156,7 +156,7 @@ class Command(BaseCommand):
         # finalize
         transaction.commit()
         print 'FINISHED UPDATING DATABASE'
-        print_time_statistics('stations', station_ctr, start_time)
+        print_time_statistics('updated', 'stations', station_ctr, start_time)
         print ''
 
         # cleanup: manual database commits in bulks

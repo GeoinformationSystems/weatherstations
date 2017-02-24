@@ -19,7 +19,8 @@ class StationData(models.Model):
     station = models.ForeignKey \
     (
         'Station',
-        related_name="station"
+        related_name="station",
+        db_index=True
     )
 
     # main attributes

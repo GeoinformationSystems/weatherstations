@@ -232,23 +232,13 @@ class Command(BaseCommand):
                         station_ctr += 1
                         if station_ctr % BULK_SIZE == 0:
                             transaction.commit()
-                            print_time_statistics\
-                            (
-                                'stations',
-                                station_ctr,
-                                start_time,
-                                intermediate_time
-                            )
+                            print_time_statistics('saved', 'stations',\
+                                station_ctr, start_time, intermediate_time)
                             intermediate_time = time.time()
 
         transaction.commit()
         print '\nFINISHED WRITING STATIONS TO DATABASE'
-        print_time_statistics \
-        (
-            'stations',
-            station_ctr,
-            start_time
-        )
+        print_time_statistics('saved', 'stations', station_ctr, start_time)
         print ''
 
 
