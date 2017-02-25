@@ -20,7 +20,8 @@ class Station(models.Model):
     # main attributes
     id = models.BigIntegerField \
     (
-        primary_key=True
+        primary_key=True,
+        db_index=True
     )
 
     name = models.CharField \
@@ -83,8 +84,6 @@ class Station(models.Model):
     (
         default=0
     )
-
-
 
     # ----------------------------------------------------------------------------
     def __unicode__(self):

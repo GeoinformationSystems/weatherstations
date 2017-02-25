@@ -83,11 +83,12 @@ def print_time_statistics\
 
     new_time = time.time()
 
-    print_str = str(''
-        + operation_name
+    print_str = str\
+    (
+        operation_name
         + str(record_ctr).rjust(8)
         + ' '
-        + records_name
+        + str(records_name)
     )
 
     if intermediate_time > 0:

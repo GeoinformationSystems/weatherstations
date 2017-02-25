@@ -23,6 +23,13 @@ POSSIBLE_ARGUMENTS = \
 ]
 
 
+# maximum distance between two stations with the same id
+# to say that they are "the same" / have only slightly moved
+DISTANCE_THRESHOLD = 2.0 # [km]
+
+TEST_RUN = True
+
+
 ################################################################################
 # INCLUDES
 ################################################################################
@@ -30,6 +37,8 @@ POSSIBLE_ARGUMENTS = \
 # general python modules
 import os
 import time
+from haversine import haversine
+from sets import Set
 
 # django modules
 from django.core.management.base import BaseCommand, CommandError
@@ -136,6 +145,7 @@ class Command(BaseCommand):
     def populate_stations(self):
 
         # COUNTRY CODES
+        # -------------
 
         country_codes = {}
 
@@ -154,12 +164,14 @@ class Command(BaseCommand):
                 country_codes[code] = country
 
 
+        # INITIAL STATION POPULATION
+        # --------------------------
+
         # preparation for time management
         station_ctr =       0
         start_time =        time.time()
         intermediate_time = start_time
         total_time =        start_time
-
 
         # read all weather stations and write them into the database
         for dataset in DATASETS:
@@ -211,34 +223,164 @@ class Command(BaseCommand):
                     # get country name from country code
                     country = country_codes.get(int(str(id)[0:3]))
 
-                    # test if station id is already registered in the database
-                    existing_station = Station.objects.filter(id=id)
-                    if existing_station.exists():
-                        pass # ignore for now
+                    # save new station
+                    new_station = Station \
+                    (
+                        id =        id,
+                        name =      name,
+                        country =   country,
+                        lat =       lat,
+                        lng =       lng,
+                        elev =      elev,
+                    )
+                    new_station.save()
 
-                    # entry does not exist so far -> create it!
-                    else:
-                        new_station = Station \
-                        (
-                            id =        id,
-                            name =      name,
-                            country =   country,
-                            lat =       lat,
-                            lng =       lng,
-                            elev =      elev,
-                        )
-                        new_station.save()
+                    station_ctr += 1
 
-                        station_ctr += 1
-                        if station_ctr % BULK_SIZE == 0:
-                            transaction.commit()
-                            print_time_statistics('saved', 'stations',\
-                                station_ctr, start_time, intermediate_time)
-                            intermediate_time = time.time()
+                    if station_ctr % BULK_SIZE == 0:
+                        transaction.commit()
+                        print_time_statistics('saved', 'stations',\
+                            station_ctr, start_time, intermediate_time)
+                        intermediate_time = time.time()
 
         transaction.commit()
         print '\nFINISHED WRITING STATIONS TO DATABASE'
         print_time_statistics('saved', 'stations', station_ctr, start_time)
+        print ''
+
+
+        # MERGE DUPLICATES
+        # ----------------
+
+        # preparation for time management
+        duplicate_ctr =     0
+        start_time =        time.time()
+        intermediate_time = start_time
+        total_time =        start_time
+
+        # get all countries which have stations
+        # use a set to avoid duplicates
+        countries = set()
+        for station in Station.objects.all():
+            countries.add(station.country)
+
+        # strategy: first identify all duplicates, then update/delete them
+        # => avoids manual iterator resetting helll
+        duplicates = []
+
+        # find all duplicates
+        for country in countries:
+
+            # get all stations in this country
+            stations_in_country = Station.objects.filter(country=country)
+
+            # find duplicates (O(n*n))
+            i = 0
+            j = 1
+            end = len(stations_in_country)-1
+
+            while i < end:
+                j = i+1
+                while j < end:
+
+                    # get stations
+                    A = stations_in_country[i]
+                    B = stations_in_country[j]
+
+                    # check if first 8 digits of id are the same
+                    # -> because last three digits might be increments of
+                    #    the same station that has moved or so...
+                    if (str(A.id)[0:7] == str(B.id)[0:7]):
+
+                        # check if the distance between both stations is small
+                        # -> because it could be the station has slightly moved
+                        A_coords = (A.lat, A.lng)
+                        B_coords = (B.lat, B.lng)
+                        stations_close = haversine(A_coords, B_coords) < DISTANCE_THRESHOLD
+
+                        # check if the names are the same and not empty
+                        names_same = (A.name == B.name) and (A.name != '')
+                        if names_same or stations_close:
+
+                            # duplicate found! => merge stations
+                            # assumption: A = master, B = duplicate
+                            # N.B! A master station can have multiple duplicates
+
+                            # find position in duplicate list where to append it
+                            # default: None => append new duplicate
+                            duplicates_idx = None
+
+                            # if master already has duplicates, use this idx
+                            for idx, duplicate in enumerate(duplicates):
+                                for alternative in duplicate:
+                                    if alternative == A or alternative == B:
+                                        duplicates_idx = idx
+
+                            # create new set of duplicates
+                            if not duplicates_idx:
+                                duplicates.append(set())
+                                duplicates_idx = len(duplicates)-1
+
+                            # finally add duplicates
+                            duplicates[duplicates_idx].add(A)
+                            duplicates[duplicates_idx].add(B)
+
+                            duplicate_ctr += 1
+                            if duplicate_ctr % (BULK_SIZE/10) == 0:
+                                print_time_statistics('found', 'duplicates', \
+                                    duplicate_ctr, start_time, intermediate_time)
+                                intermediate_time = time.time()
+
+                    ## check next station
+                    j += 1
+                i += 1
+
+        print '\nFINISHED IDENTIFYING DUPLICATES IN DATABASE'
+        print_time_statistics('found', 'duplicates', duplicate_ctr, start_time)
+        print ''
+
+        # handle duplicates
+        duplicate_ctr =     0
+        start_time =        time.time()
+        intermediate_time = start_time
+        total_time =        start_time
+
+        for duplicate in duplicates:
+
+            # convert set to list
+            station_duplicates = list(duplicate)
+
+            # assumption:
+            # first station is the master, the other stations are duplicates
+            master = station_duplicates[0]
+
+            # for each duplicate:
+            # create StationDuplicates and delete itself
+            i = 1 # skip the master!
+            end = len(station_duplicates)
+            while i < end:
+                new_duplicate = StationDuplicate \
+                (
+                    master_station = master,
+                    duplicate_station = station_duplicates[i].id
+                    # -> id, not object itself, since it will be deleted
+                )
+                new_duplicate.save()
+                station_duplicates[i].delete()
+
+                duplicate_ctr += 1
+                if duplicate_ctr % BULK_SIZE == 0:
+                    transaction.commit()
+                    print_time_statistics('removed', 'duplicates', \
+                        duplicate_ctr, start_time, intermediate_time)
+                    intermediate_time = time.time()
+
+                # go to next station duplicate
+                i += 1
+
+        transaction.commit()
+        print '\nFINISHED REMOVING DUPLICATES FROM DATABASE'
+        print_time_statistics('removed', 'duplicates', duplicate_ctr, start_time)
         print ''
 
 
@@ -248,6 +390,7 @@ class Command(BaseCommand):
 
     def populate_data(self, dataset):
 
+        # get reference to input dataset
         input_data = DATASETS[dataset]['data']
 
         # preparation for time measurement and
@@ -303,20 +446,28 @@ class Command(BaseCommand):
                     # next month
                     i += 1
 
-                # get foreign key: station
+                # get related station:
+                # 1) check in station duplicates
                 try:
-                    station = Station.objects.get(id=station_id)
+                    duplicate = StationDuplicate.objects.get\
+                                (duplicate_station=station_id)
+                    station = duplicate.master_station
 
                 except:
-                    print "Related station could not be found"
-                    continue
+
+                    # 2) check in (master) stations
+                    try:
+                        station = Station.objects.get(id=station_id)
+
+                    except:
+                        print "Related station with id", id, "could not be  found"
+                        continue
 
                 # for each month
                 for month, value in enumerate(monthly_data):
 
-                    # ignore None (0. month)
-                    if value is None:
-                        continue
+                    # ignore 0. month
+                    if value is None: continue
 
                     # check if object (station->year->month) exists
                     try:
@@ -355,25 +506,15 @@ class Command(BaseCommand):
                     # go to next data
                     record_ctr += 1
 
-                    # save each bulk with BULK_SIZE to the database
+                    # save each bulk to the database
                     if record_ctr % BULK_SIZE == 0:
                         transaction.commit()
-                        print_time_statistics \
-                        (
-                            dataset + ' data',
-                            record_ctr,
-                            start_time,
-                            intermediate_time
-                        )
+                        print_time_statistics('saved', dataset + ' data', \
+                            record_ctr, start_time, intermediate_time )
                         intermediate_time = time.time()
 
         # finalize database writing
         transaction.commit()
         print '\nFINISHED WRITING ' + dataset.upper() + ' TO DATABASE'
-        print_time_statistics \
-        (
-            dataset + ' data',
-            record_ctr,
-            start_time
-        )
+        print_time_statistics('saved', dataset + ' data', record_ctr, start_time)
         print '\n\n'
