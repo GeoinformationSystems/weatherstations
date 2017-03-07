@@ -39,6 +39,7 @@ JUST_WIDTH = \
 }
 
 
+
 ################################################################################
 # LOCAL HELPERS
 ################################################################################
@@ -117,25 +118,13 @@ class Command(BaseCommand):
             num_stations
         )
 
-        # stations with a complete country name
-        without_country = Station.objects.filter(country='').count()
+        # promising stations with decent coverage
+        promising_stations = Station.objects \
+            .filter(complete_data_rate__gte=MIN_COVERAGE) \
+            .filter(largest_gap__lte=MAX_GAPS)
         print_stat(
-            "stations with a complete country name",
-            num_stations - without_country,
-            num_stations
-        )
-
-        # stations in correct lat/lng bound
-        in_bounds = Station.objects \
-            .filter(lat__gte = -MAX_LAT) \
-            .filter(lat__lte =  MAX_LAT) \
-            .filter(lng__gte = -MAX_LNG) \
-            .filter(lng__lte =  MAX_LNG) \
-            .count()
-
-        print_stat(
-            "stations in correct lat/lng bounds",
-            in_bounds,
+            "promising stations with decent coverage",
+            promising_stations.count(),
             num_stations
         )
 
@@ -144,10 +133,12 @@ class Command(BaseCommand):
         # TEMPERATURE AND PRECIPITATION DATA
         # ======================================================================
 
-        print_header("WEATHER DATA")
+        print_header("CLIMATE DATA")
+
+        promising_station_data = StationData.objects.filter(station=promising_stations)
 
         # reference values
-        num_records = StationData.objects.count()
+        num_records = promising_station_data.count()
 
         # number of stations
         print_stat(
@@ -157,8 +148,8 @@ class Command(BaseCommand):
         )
 
         # earliest (min) and latest (max) year of record
-        min_year = StationData.objects.all().aggregate(Min('year'))['year__min']
-        max_year = StationData.objects.all().aggregate(Max('year'))['year__max']
+        min_year = promising_station_data.aggregate(Min('year'))['year__min']
+        max_year = promising_station_data.aggregate(Max('year'))['year__max']
 
         print_stat(
             "minimum year",
@@ -171,101 +162,92 @@ class Command(BaseCommand):
             None
         )
 
-        # coverage of months in year
-        print_line()
-        print_stat(
-            "total number of monthly data records",
-            num_months,
-            num_months
-        )
-
-        empty_records = 0
-        for month in MONTHS:
-            kwargs = {'{0}'.format(month[0]): None}
-            empty_months = dataset[1].objects.filter(**kwargs).count()
-            print_stat(
-                "  complete data for " + month[1],
-                num_records - empty_months,
-                num_records
-            )
-            empty_records += empty_months
-
-        print_stat(
-            "complete monthly data records",
-            num_months - empty_records,
-            num_months
-        )
-
         # count gaps (number of consecutive months with missing data)
-        gaps = [0]*(MAX_GAP+1) # MAGIC! initialize list with n 0-elements
+        gaps = {
+            'tmp': [0]*(MAX_GAP+1), # MAGIC! initialize list with n 0-elements
+            'prc': [0]*(MAX_GAP+1)  # MAGIC! initialize list with n 0-elements
+        }
 
         # for each Station
         # for station in Station.objects.filter(name='Tillabery'):
-        for station in Station.objects.all():
+        for station in promising_stations:
 
             # get all monthly data for this station
-            data_records = dataset[1].objects.filter(station=station)
+            data_records = promising_station_data.filter(station=station)
 
             # compile consective list of monthly data values
-            data_list = []
+            data_list = {
+                'tmp': [],
+                'prc': []
+            }
+
             for data_record in data_records:
-                for month in MONTHS:
-                    dec = getattr(data_record,month[0])
-                    if not dec is None:
-                        dec = float(dec)
-                    data_list.append(dec)
+                tmp = data_record.temperature
+                prc = data_record.precipitation
+                if not tmp is None: tmp = float(tmp)
+                if not prc is None: prc = float(prc)
+                data_list['tmp'].append(tmp)
+                data_list['prc'].append(prc)
 
-            # strip list left and right
-            #  -> not necessary, because the visualization also has to
-            # deal with missing data in the beginning / end of a year
+            # for both temperature and precipitation identify gaps
+            for data_key, data_values in data_list.iteritems():
 
-            # identify gaps
-            in_gap = False
-            gap = 0
-            for value in data_list:
-
-                # 4 cases:
-                # 1) currently in a gap
-                if in_gap:
-                    # 1.1) gap continues -> increment!
-                    if value is None:
-                        gap += 1
-                    # 1.2) gap ended -> finalize!
-                    # -> gap size n has one more occurence
-                    else:
-                        gaps[gap] += 1
-                        gap = 0
-                        in_gap = False
-                # 2) currently not in a gap
-                else:
-                    # 2.1) gap found -> start new gap
-                    if value is None:
-                        gap = 1
-                        in_gap = True
-                    # 2.2) no gap found -> conitinue!
-                    else:
-                        pass
-
-            # border case: if gap reached all the way to the end, finalize again
-            if in_gap:
-                gaps[gap] += 1
-                gap = 0
+                # identify gaps
                 in_gap = False
+                gap_size = 0
+
+                # for each data point
+                for data_value in data_values:
+
+                    # determine if it is a gap
+                    is_gap = data_value is None
+
+                    # 4 cases:
+                    # 1) currently in a gap
+                    if in_gap:
+                        # 1.1) gap continues -> increment!
+                        if is_gap:
+                            gap_size += 1
+                        # 1.2) gap ended -> finalize!
+                        # -> gap size n has one more occurence
+                        else:
+                            gaps[data_key][gap_size] += 1
+                            gap_size = 0
+                            in_gap = False
+
+                    # 2) currently not in a gap
+                    else:
+                        # 2.1) gap found -> start new gap
+                        if is_gap:
+                            gap_size = 1
+                            in_gap = True
+                        # 2.2) no gap found -> continue!
+                        else:
+                            pass
+
+                # border case: if gap reached all the way to the end, finalize again
+                if in_gap:
+                    gaps[data_key][gap_size] += 1
+                    gap_size = 0
+                    in_gap = False
 
         # print gaps
-        num_gaps = sum(gaps)
+        for gap_key, gap_value in gaps.iteritems():
 
-        print_line()
-        print_stat(
-            "total number of gaps",
-            num_gaps,
-            num_gaps
-        )
+            print_header("GAPS IN " + gap_key)
 
-        for gap_size, gaps_of_size in enumerate(gaps):
-            if gaps_of_size > 0:
-                print_stat(
-                    "  number of gaps with size " + str(gap_size),
-                    gaps_of_size,
-                    num_gaps
-                )
+            num_gaps = sum(gap_value)
+
+            print_stat(
+                "total number of gaps",
+                num_gaps,
+                num_gaps
+            )
+
+            for gap_size, gaps_of_size in enumerate(gap_value):
+                if gaps_of_size > 0:
+                    print_stat(
+                        "  gap size " + str(gap_size),
+                        gaps_of_size,
+                        num_gaps
+                    )

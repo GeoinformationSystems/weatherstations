@@ -25,6 +25,10 @@ MAX_GAP = 10000
 # optimal: [1000 .. 5000]
 BULK_SIZE = 1000
 
+# Only include stations with the following characteristics:
+MIN_COVERAGE =  0.75     # at least x % coverage
+MAX_GAPS =      120      # maximum number of consecutive missing months
+
 ################################################################################
 # INPUT DATA FROM project/data FOLDER
 # DATA FILES AND CHARACTER MAPPINGS
