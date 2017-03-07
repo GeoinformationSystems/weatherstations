@@ -159,5 +159,8 @@ class Command(BaseCommand):
         print_time_statistics('updated', 'stations', station_ctr, start_time)
         print ''
 
+        # data cleanup: delete all stations that have 0.0 coverage
+        Station.objects.filter(complete_data_rate=0.0).delete()
+
         # cleanup: manual database commits in bulks
         transaction.set_autocommit(True)
