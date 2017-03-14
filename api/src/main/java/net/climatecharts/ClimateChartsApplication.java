@@ -9,15 +9,16 @@ import javax.ws.rs.core.Application;
 /**
  * Application endpoint for ClimateCharts server
  * 
- * @author matthias
+ * @author marcus
  */
+
 @ApplicationPath("/api")
 public class ClimateChartsApplication extends Application
 {	
 	@Override
 	public Set<Class<?>> getClasses()
 	{
-		final Set<Class<?>> classes = new HashSet<>();
+		final Set<Class<?>> classes = new HashSet<Class<?>>();
 		classes.add(WeatherStations.class);
 		return classes;
 	}
