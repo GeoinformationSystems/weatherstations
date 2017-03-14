@@ -5,6 +5,13 @@
   <version>0.0.1-SNAPSHOT</version>
   <packaging>war</packaging>
   <name>WeatherStations API for the ClimateCharts Web Application</name>
+  <repositories>
+    <repository>
+      <id>my-repo1</id>
+      <name>your custom repo</name>
+      <url>http://clojars.org/repo/</url>
+    </repository>
+    </repositories>
   
 	<dependencies>
 
@@ -64,6 +71,14 @@
 			<version>4.12</version>
 			<scope>test</scope>
 		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/postgresql/postgresql -->
+		<dependency>
+		    <groupId>postgresql</groupId>
+		    <artifactId>postgresql</artifactId>
+		    <version>9.3-1102.jdbc41</version>
+		</dependency>
+	
 
 	</dependencies>
 	<build>

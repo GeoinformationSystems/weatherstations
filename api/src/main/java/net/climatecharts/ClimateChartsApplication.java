@@ -12,7 +12,7 @@ import javax.ws.rs.core.Application;
  * @author marcus
  */
 
-@ApplicationPath("/api")
+@ApplicationPath("")
 public class ClimateChartsApplication extends Application
 {	
 	@Override

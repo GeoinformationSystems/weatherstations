@@ -3,6 +3,7 @@ package net.climatecharts;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -17,7 +18,7 @@ import java.util.*;
  * @author Marcus Kossatz
  */
 
-@Path("/{op}")
+@Path("")
 public class WeatherStations
 {	
 	/**
@@ -34,7 +35,9 @@ public class WeatherStations
 	 * Public member functions that answer requests to the database
 	 */
 	
+	
 	@GET
+	@Path("/getAllStations")
 	@Produces("application/json")
 	public String getAllStations()
 	{
@@ -79,8 +82,13 @@ public class WeatherStations
 	
 	
 	@GET
+	@Path("/getStationData")
 	@Produces("application/json")
-	public String getStationData(long stationId, int minYear, int maxYear)
+	public String getStationData(
+				@QueryParam("stationId") 	long stationId,
+				@QueryParam("minYear") 		int minYear,
+				@QueryParam("maxYear") 		int maxYear
+			)
 	{
 		// access the database
 		Connection conn = connectToDatabase();
