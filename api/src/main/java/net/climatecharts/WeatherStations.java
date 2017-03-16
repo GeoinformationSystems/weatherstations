@@ -93,36 +93,51 @@ public class WeatherStations
 		// access the database
 		Connection conn = connectToDatabase();
 		
-		// data structure: for each year: [temperature[], precipitation[]]
+		/**
+		 *  data structure:
+		 *  {
+		 *  	numYears:				number of years
+		 *  	prec:					for each dataset
+		 *  	[						for each month
+		 *  		{
+		 *  			rawData: []		data for each year
+		 *  			mean:			data mean by month
+		 *  			numGaps:		number of missing years
+		 *  		},
+		 *  		{...}				for each month
+		 *  	], 
+		 *  	temp:
+		 *  	[...]					for each dataset
+		 *  }
+		 */
+		
 		int numYears = maxYear-minYear;
-		float[][][] stationData = new float[numYears][][];
-		for (int i=0; i<numYears; i++)
-		{
-			stationData[i] = new float[2][];
-			stationData[i][0] = new float[12];	// temperature
-			stationData[i][1] = new float[12];	// precipitation
-		}
-
-		// fill data structure
+		
+		// use 'Float' instead of 'float' to have 'null' as the default value instead of '0.0'
+		// --> distinguish between 'null' and '0.0'
+		Float[][] rawPrecData = new Float[12][numYears];
+		Float[][] rawTempData = new Float[12][numYears];
+		
 		try
 		{
 			Statement statement = conn.createStatement();
 			ResultSet results = statement.executeQuery(getStationDataQuery(stationId, minYear, maxYear));
 			while(results.next())
 			{
-				int year =				results.getInt		("year");
-				int month =				results.getInt		("month");
-				float temperature = 	results.getFloat	("temperature");
-				float precipitation = 	results.getFloat	("precipitation");
+				int year =		results.getInt		("year");
+				int month =		results.getInt		("month");
+				float temp =	results.getFloat	("temperature");
+				float prec = 	results.getFloat	("precipitation");
 				
 				int yearIdx = year-minYear;
 				int monthIdx = month-1;
 				
-				stationData[yearIdx][0][monthIdx] = temperature;
-				stationData[yearIdx][1][monthIdx] = precipitation;
+				rawPrecData[monthIdx][yearIdx] = prec;
+				rawTempData[monthIdx][yearIdx] = temp;
+				
 			}
 			results.close();
-			statement.close();
+			statement.close();			
 		}
 		catch (SQLException e)
 		{
@@ -130,21 +145,70 @@ public class WeatherStations
 			System.err.println(e.getMessage());
 		}
 		
-		// finally transform data structure to JSON
-		JSONArray stationDataFinal = new JSONArray();
-
-		// create structure: [{year, 12x precipitation, 12x temperature}]
-		for (int i=0; i<numYears; i++)
+		// create final JSON object structure
+		JSONArray precData = new JSONArray();
+		JSONArray tempData = new JSONArray();
+		
+		// calculate means and number of gaps
+		// for each month
+		for (int monthIdx=0; monthIdx<12; monthIdx++)
 		{
-			JSONObject dataYear = new JSONObject();
-			dataYear.put("year", minYear+i);
-			dataYear.put("temp", stationData[i][0]);
-			dataYear.put("prec", stationData[i][1]);
-			stationDataFinal.put(dataYear);
-		}
+			// for each dataset
+			for (int ds=0; ds<2; ds++)
+			{
+				Float[] yearlyValues = new Float[numYears];
+				JSONArray outputData = new JSONArray();
+				if (ds==0)	// temperature
+				{
+					yearlyValues = rawTempData[monthIdx];
+					outputData = tempData;					
+				}
+				else		// precipitation
+				{
+					yearlyValues = rawPrecData[monthIdx];
+					outputData = precData;					
+				}
 
-		// format result in a JSON string and return
-		return stationDataFinal.toString();
+				
+				// sum up values for each year in this month
+				// count the gaps and values to calculate mean and determine the quality
+				float sum = 0.0f;
+				int numValues = 0;
+				int numGaps = 0;
+				for (int yearIdx=0; yearIdx<numYears; yearIdx++)
+				{		
+					Float value = yearlyValues[yearIdx];
+					if (value == null)
+						numGaps++;
+					else
+					{
+						sum += value;
+						numValues++;
+					}
+				}
+				
+				// calculate mean
+				Float mean = null;
+				if (numValues > 0)
+					mean = sum/numValues;
+				
+				// write data
+				JSONObject thisMonth = new JSONObject();
+				thisMonth.put("rawData", yearlyValues);
+				thisMonth.put("mean", mean);
+				thisMonth.put("numGaps", numGaps);
+				
+				outputData.put(thisMonth);				
+			}
+		}
+		
+		JSONObject stationData = new JSONObject();
+		stationData.put("numYears", numYears);
+		stationData.put("prec", precData);
+		stationData.put("prec", tempData);
+		
+		return stationData.toString();
+		
 	}
 	
 	/**
