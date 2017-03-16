@@ -205,7 +205,7 @@ public class WeatherStations
 		JSONObject stationData = new JSONObject();
 		stationData.put("numYears", numYears);
 		stationData.put("prec", precData);
-		stationData.put("prec", tempData);
+		stationData.put("temp", tempData);
 		
 		return stationData.toString();
 		

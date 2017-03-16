@@ -25,6 +25,6 @@ public class WeatherStationsTest
 	public void testStationData() throws ParseException, IOException
 	{
 		String responseString = new WeatherStations().getStationData(stationID, minYear, maxYear);
-		System.out.println(responseString.substring(0, 512));	
+		System.out.println(responseString);	
 	}
 }
