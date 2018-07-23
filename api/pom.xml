@@ -85,14 +85,14 @@
 		<finalName>weatherstations-api</finalName>
 
 		<!-- exclude config.ini from WEB-INF/classes -->
-		<resources>
+		<!-- resources>
 			<resource>
 				<directory>/src/main/resources</directory>
 				<excludes>
 					<exclude>*</exclude>
 				</excludes>
 			</resource>
-		</resources>
+		</resources-->
 
 		<plugins>
 
@@ -119,14 +119,14 @@
 						</resource>
 
 						<!-- put config.ini in WEB-INF/classes -->
-						<resource>
+						<!-- resource>
 							<directory>src/main/resources/</directory>
 							<includes>
 								<include>config.ini</include>
 							</includes>
 							<filtering>true</filtering>
 							<targetPath>/WEB-INF</targetPath>
-						</resource>
+						</resource-->
 					</webResources>
 				</configuration>
 			</plugin>

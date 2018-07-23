@@ -1,5 +1,4 @@
 from django.db import models
-from django.forms.models import model_to_dict
 
 # ==============================================================================
 '''
@@ -15,19 +14,17 @@ from django.forms.models import model_to_dict
     Station 1:n StationData
 '''
 
+
 # ==============================================================================
 
 class StationDuplicate(models.Model):
-
     # main attributes
-    duplicate_station = models.BigIntegerField \
-    (
+    duplicate_station = models.BigIntegerField(
         default=0,
         db_index=True
     )
 
-    master_station = models.ForeignKey \
-    (
+    master_station = models.ForeignKey(
         'Station',
         related_name='master_station',
         db_index=True

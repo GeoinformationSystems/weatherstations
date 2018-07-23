@@ -1,0 +1,3 @@
+django
+haversine
+psycopg2

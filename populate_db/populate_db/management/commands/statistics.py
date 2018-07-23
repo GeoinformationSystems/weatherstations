@@ -11,33 +11,24 @@
 ################################################################################
 
 # general python modules
-import os
-from decimal import *
 
 # django modules
-from django.core.management.base import BaseCommand, CommandError, NoArgsCommand
-from django.conf import settings
-from django.db import models, transaction
+from django.core.management.base import BaseCommand
 from django.db.models import *
 
 # own modules
 from populate_db.models import *
-from populate_db.management.commands.input_data import *
-from populate_db.management.commands.helpers import *
-
-
+from input_data import *
 ################################################################################
 # GLOBAL CONSTANTS
 ################################################################################
 
 # number of characters for maxmimum length of ... for the statistics
-JUST_WIDTH = \
-{
-    'description':  40,     # maximum length of describing text
-    'number':       10,     # maximum length of number
-    'rate':         8,      # maximum length of rate [%]
+JUST_WIDTH = {
+    'description': 40,  # maximum length of describing text
+    'number': 10,  # maximum length of number
+    'rate': 8,  # maximum length of rate [%]
 }
-
 
 
 ################################################################################
@@ -52,11 +43,11 @@ def print_header(title):
     print "=" * len(title)
     print ""
     print(
-        str("METRIC").ljust(JUST_WIDTH['description']) +
-        "|" +
-        str("TOTAL NUM").rjust(JUST_WIDTH['number']) +
-        "|" +
-        str("RATE").rjust(JUST_WIDTH['rate'] )
+            str("METRIC").ljust(JUST_WIDTH['description']) +
+            "|" +
+            str("TOTAL NUM").rjust(JUST_WIDTH['number']) +
+            "|" +
+            str("RATE").rjust(JUST_WIDTH['rate'])
     )
     print_line()
 
@@ -71,16 +62,16 @@ def print_line():
 
 # ------------------------------------------------------------------------------
 def print_stat(text, number, total_number):
-    if not total_number is None:
+    if total_number is not None:
         rate = str('%.1f' % (100 * float(number) / float(total_number))) + " %"
     else:
         rate = ''
     print(
-        str(text).ljust(JUST_WIDTH['description']) +
-        "|" +
-        str(int(number)).rjust(JUST_WIDTH['number']) +
-        "|" +
-        str(rate).rjust(JUST_WIDTH['rate'])
+            str(text).ljust(JUST_WIDTH['description']) +
+            "|" +
+            str(int(number)).rjust(JUST_WIDTH['number']) +
+            "|" +
+            str(rate).rjust(JUST_WIDTH['rate'])
     )
 
 
@@ -92,7 +83,6 @@ class Command(BaseCommand):
     help = 'Creates statistics about the quality of the data in the database.'
 
     def handle(self, *args, **options):
-
 
         # ======================================================================
         # WEATHER STATIONS
@@ -127,7 +117,6 @@ class Command(BaseCommand):
             promising_stations.count(),
             num_stations
         )
-
 
         # ======================================================================
         # TEMPERATURE AND PRECIPITATION DATA
@@ -164,8 +153,8 @@ class Command(BaseCommand):
 
         # count gaps (number of consecutive months with missing data)
         gaps = {
-            'tmp': [0]*(MAX_GAP+1), # MAGIC! initialize list with n 0-elements
-            'prc': [0]*(MAX_GAP+1)  # MAGIC! initialize list with n 0-elements
+            'tmp': [0] * (MAX_GAP + 1),  # MAGIC! initialize list with n 0-elements
+            'prc': [0] * (MAX_GAP + 1)  # MAGIC! initialize list with n 0-elements
         }
 
         # for each Station
@@ -184,8 +173,10 @@ class Command(BaseCommand):
             for data_record in data_records:
                 tmp = data_record.temperature
                 prc = data_record.precipitation
-                if not tmp is None: tmp = float(tmp)
-                if not prc is None: prc = float(prc)
+                if tmp is not None:
+                    tmp = float(tmp)
+                if prc is not None:
+                    prc = float(prc)
                 data_list['tmp'].append(tmp)
                 data_list['prc'].append(prc)
 

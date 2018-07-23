@@ -1,6 +1,4 @@
-import datetime
 from django.db import models
-from django.forms.models import model_to_dict
 
 # ==============================================================================
 '''
@@ -11,31 +9,27 @@ from django.forms.models import model_to_dict
     StationData n:1 Station
 '''
 
+
 # ==============================================================================
 
 class StationData(models.Model):
-
     # foreign key
-    station = models.ForeignKey \
-    (
+    station = models.ForeignKey(
         'Station',
         related_name="station",
         db_index=True
     )
 
     # main attributes
-    year = models.PositiveSmallIntegerField \
-    (
+    year = models.PositiveSmallIntegerField(
         default='2017'
     )
 
-    month = models.PositiveSmallIntegerField \
-    (
+    month = models.PositiveSmallIntegerField(
         default='1'
     )
 
-    temperature = models.DecimalField \
-    (
+    temperature = models.DecimalField(
         max_digits=4,
         decimal_places=2,
         null=True,
@@ -43,8 +37,7 @@ class StationData(models.Model):
         default=None
     )
 
-    precipitation = models.DecimalField \
-    (
+    precipitation = models.DecimalField(
         max_digits=5,
         decimal_places=1,
         null=True,
@@ -53,11 +46,9 @@ class StationData(models.Model):
     )
 
     # additional speedup attributes (might not be useful?)
-    is_complete = models.BooleanField \
-    (
+    is_complete = models.BooleanField(
         default=False
     )
-
 
     # ----------------------------------------------------------------------------
     def __unicode__(self):
@@ -65,8 +56,7 @@ class StationData(models.Model):
             month_pad = ''
         else:
             month_pad = '0'
-        return str \
-        (
+        return str(
             str(self.station) + '|' +
             str(self.year) + '-' +
             month_pad +
@@ -76,4 +66,4 @@ class StationData(models.Model):
     # ----------------------------------------------------------------------------
     class Meta:
         app_label = 'populate_db'
-        ordering =  ['station', 'year', 'month']
+        ordering = ['station', 'year', 'month']

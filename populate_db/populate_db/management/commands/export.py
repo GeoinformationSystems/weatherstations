@@ -1,4 +1,19 @@
 ################################################################################
+# INCLUDES
+################################################################################
+
+# general python modules
+import csv
+
+# django modules
+from django.core.management.base import BaseCommand
+from django.utils.encoding import smart_str
+
+# own modules
+from populate_db.models import *
+from populate_db.management.commands.input_data import *
+
+################################################################################
 # EXPORT THE CLIMATE DATABASE (STATIONS) TO SHOW IT IN QGIS
 ################################################################################
 
@@ -13,27 +28,6 @@
 # export file name
 EXPORT_FILE = "data/qgis/stations.csv"
 
-################################################################################
-# INCLUDES
-################################################################################
-
-# general python modules
-import os
-import time
-import csv
-
-# django modules
-from django.core.management.base import BaseCommand, CommandError
-from django.conf import settings
-from django.db import models, transaction
-from django.db.models import *
-from django.utils.encoding import smart_str
-
-# own modules
-from populate_db.models import *
-from populate_db.management.commands.input_data import *
-from populate_db.management.commands.helpers import *
-
 
 ################################################################################
 # MAIN
@@ -45,13 +39,11 @@ class Command(BaseCommand):
             - lat, lng \
             - complete_data_rate, largest_gap"
 
-
     # ==========================================================================
     # MAIN
     # ==========================================================================
 
     def handle(self, *args, **options):
-
         # get all promising stations
         promising_stations = Station.objects \
             .filter(complete_data_rate__gte=MIN_COVERAGE) \
@@ -59,15 +51,13 @@ class Command(BaseCommand):
 
         # export to csv
         with open(EXPORT_FILE, 'wb') as export_file:
-            writer = csv.writer\
-                (
-                    export_file,
-                    delimiter=',',
-                    quotechar='"'
-                )
+            writer = csv.writer(
+                export_file,
+                delimiter=',',
+                quotechar='"'
+            )
 
-            writer.writerow \
-            ([
+            writer.writerow([
                 smart_str(u"name"),
                 smart_str(u"country"),
                 smart_str(u"lat"),
@@ -77,8 +67,7 @@ class Command(BaseCommand):
             ])
 
             for station in promising_stations:
-                writer.writerow \
-                ([
+                writer.writerow([
                     smart_str(station.name),
                     smart_str(station.country),
                     smart_str(station.lat),

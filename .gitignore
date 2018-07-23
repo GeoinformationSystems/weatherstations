@@ -1,3 +1,9 @@
 data/
 populate_db/migrations
 *.pyc
+
+api/.project
+api/.settings
+api/.classpath
+
+populate_db/venv
