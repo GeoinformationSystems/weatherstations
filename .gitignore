@@ -7,3 +7,4 @@ api/.settings
 api/.classpath
 
 populate_db/venv
+venv/

@@ -68,19 +68,28 @@ class Command(BaseCommand):
             min_year = station_datas.aggregate(Min('year'))['year__min']
             max_year = station_datas.aggregate(Max('year'))['year__max']
 
+            if TEST_RUN:
+                if min_year is None:
+                    min_year = 0
+                if max_year is None:
+                    max_year = 0
+
             # get total number of months that lack either temp or prcp data
             missing_months = station_datas.filter(is_complete=False)
 
             # get percentage of complete months
             num_months = station_datas.count()
             num_missing_months = missing_months.count()
-            complete_data_rate = float(num_months - num_missing_months) / float(num_months)
+            if num_months != num_missing_months:
+                complete_data_rate = float(num_months - num_missing_months) / float(num_months)
+            else:
+                complete_data_rate = 0
 
             # identify gaps = consecutive missing months
             gaps = [0] * (MAX_GAP + 1)  # final list: number of gaps per gap size
             largest_gap = 0  # largest gap found so far
             currently_in_gap = False  # currently in a gap
-            # curr_gap_size = 0  # size of current gap
+            curr_gap_size = 0  # size of current gap
 
             # create consecutive list of monthly data: is data complete?
             # structure: [min_year/Jan, min_year/Feb, ..., max_yar/Dec]
@@ -145,7 +154,7 @@ class Command(BaseCommand):
                 print_time_statistics('updated', 'stations', station_ctr, start_time, intermediate_time)
                 intermediate_time = time.time()
 
-                if TEST_RUN: return
+                # if TEST_RUN: return
 
         # finalize
         transaction.commit()
@@ -157,4 +166,4 @@ class Command(BaseCommand):
         Station.objects.filter(complete_data_rate=0.0).delete()
 
         # cleanup: manual database commits in bulks
-        transaction.set_autocommit(True)
+        # transaction.set_autocommit(True)

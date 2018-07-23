@@ -4,6 +4,7 @@
 
 # general python modules
 from haversine import haversine
+from itertools import islice
 
 # django modules
 from django.core.management.base import BaseCommand
@@ -26,6 +27,7 @@ from input_data import *
 #   S = populate only stations (N.B: deletes temp and prcp data!)
 #   T = (re)populate only temperature
 #   P = (re)populate only precipitation
+#   U = update new temperature and preciptation from dataset
 
 ################################################################################
 # GLOBAL CONSTANTS
@@ -36,7 +38,8 @@ POSSIBLE_ARGUMENTS = \
         'A', 'a',  # all data
         'S', 's',  # only stations
         'T', 't',  # only temperature data
-        'P', 'p'  # only precipitation
+        'P', 'p',  # only precipitation
+        'U', 'u'   # update to new temperature and precipitation
     ]
 
 # maximum distance between two stations with the same id
@@ -44,6 +47,8 @@ POSSIBLE_ARGUMENTS = \
 DISTANCE_THRESHOLD = 2.0  # [km]
 
 TEST_RUN = True
+
+TEST_SIZE = 10
 
 
 ################################################################################
@@ -55,7 +60,8 @@ class Command(BaseCommand):
             A = populate everything (station -> temp -> prcp) \
             S = populate only stations (N.B: deletes temp and prcp data!) \
             T = (re)populate only temperature \
-            P = (re)populate only precipitation"
+            P = (re)populate only precipitation \
+            U = update new temperature and preciptation from dataset"
 
     # ==========================================================================
     # Handle additional populate options given to the command
@@ -108,7 +114,8 @@ class Command(BaseCommand):
                                 + ' %)'
                         )
             transaction.commit()
-
+        elif str.upper(poption) == 'U':
+            pass
         else:  # poption == 'A' or 'S':
             Station.objects.all().delete()
             # also automatically deletes StationData!
@@ -122,6 +129,8 @@ class Command(BaseCommand):
             self.populate_data('precipitation')
         elif str.upper(poption) == 'S':
             self.populate_stations()
+        elif str.upper(poption) == 'U':
+            self.update_data()
         else:  # poption == 'A'
             self.populate_stations()
             self.populate_data('temperature')
@@ -170,7 +179,12 @@ class Command(BaseCommand):
             # for each weather station in file
             with open(get_file(stations['path'])) as in_file:
 
-                for line in in_file:
+                if TEST_RUN:
+                    n_lines = TEST_SIZE
+                else:
+                    n_lines = None
+
+                for line in islice(in_file, n_lines):
 
                     id = get_int(
                         line,
@@ -388,6 +402,11 @@ class Command(BaseCommand):
                     line,
                     input_data['characters']['station_id']
                 )
+                if TEST_RUN:
+                    try:
+                        Station.objects.get(id=station_id)
+                    except Station.DoesNotExist:
+                        continue
                 year = get_int(
                     line,
                     input_data['characters']['year']
@@ -491,3 +510,124 @@ class Command(BaseCommand):
         print '\nFINISHED WRITING ' + dataset.upper() + ' TO DATABASE'
         print_time_statistics('saved', dataset + ' data', record_ctr, start_time)
         print '\n\n'
+
+    def update_data(self):
+        # get reference to input dataset
+        #   input_data = DATASETS[dataset]['data']
+
+        # preparation for time measurement and
+        record_ctr = 0
+        start_time = time.time()
+        intermediate_time = start_time
+        total_time = start_time
+
+        # # for each data record in dataset
+        # with open(get_file(input_data['path'])) as in_file:
+        #     for line in in_file:
+        #         station_id = get_int(
+        #             line,
+        #             input_data['characters']['station_id']
+        #         )
+        #         year = get_int(
+        #             line,
+        #             input_data['characters']['year']
+        #         )
+        #
+        #         # get data for each month
+        #         monthly_data = [None]  # skip idx [0] => data starts at [1]
+        #         i = 1
+        #         while i <= NUM_MONTHS:
+        #
+        #             # assemble month string '1', '2', ... , '12'
+        #             month_str = str(i)
+        #
+        #             # get raw data
+        #             this_month_value = get_int(
+        #                 line,
+        #                 input_data['characters'][month_str]
+        #             )
+        #
+        #             # if data has the null value, actually write null
+        #             is_null = False
+        #             for null_value in input_data['null_values']:
+        #                 if str(this_month_value) == null_value:
+        #                     monthly_data.append(None)
+        #                     is_null = True
+        #
+        #             # else: divide value by divison factor in data
+        #             # (converts int to float)
+        #             if not is_null:
+        #                 monthly_data.append(
+        #                     float(this_month_value) / input_data['division_factor']
+        #                 )
+        #
+        #             # next month
+        #             i += 1
+        #
+        #         # get related station:
+        #         # 1) check in station duplicates
+        #         try:
+        #             duplicate = StationDuplicate.objects.get(duplicate_station=station_id)
+        #             station = duplicate.master_station
+        #
+        #         except:
+        #
+        #             # 2) check in (master) stations
+        #             try:
+        #                 station = Station.objects.get(id=station_id)
+        #
+        #             except:
+        #                 print "Related station with id", id, "could not be  found"
+        #                 continue
+        #
+        #         # for each month
+        #         for month, value in enumerate(monthly_data):
+        #
+        #             # ignore 0. month
+        #             if value is None: continue
+        #
+        #             # check if object (station->year->month) exists
+        #             try:
+        #                 station_data = StationData.objects.get(
+        #                     station=station,
+        #                     year=year,
+        #                     month=month
+        #                 )
+        #             # if it does not exist, create it
+        #             except StationData.DoesNotExist:
+        #                 station_data = StationData(
+        #                     station=station,
+        #                     year=year,
+        #                     month=month
+        #                 )
+        #
+        #             # update value for temperature / precipitation
+        #             if dataset == 'temperature':
+        #                 station_data.temperature = value
+        #
+        #             elif dataset == 'precipitation':
+        #                 station_data.precipitation = value
+        #
+        #             # reset is_complete flag
+        #             if (station_data.temperature is None) or (station_data.precipitation is None):
+        #                 station_data.is_complete = False
+        #             else:
+        #                 station_data.is_complete = True
+        #
+        #             # done!
+        #             station_data.save()
+        #
+        #             # go to next data
+        #             record_ctr += 1
+        #
+        #             # save each bulk to the database
+        #             if record_ctr % BULK_SIZE == 0:
+        #                 transaction.commit()
+        #                 print_time_statistics('saved', dataset + ' data', record_ctr, start_time, intermediate_time)
+        #                 intermediate_time = time.time()
+        #
+        # # finalize database writing
+        # transaction.commit()
+        # print '\nFINISHED WRITING ' + dataset.upper() + ' TO DATABASE'
+        # print_time_statistics('saved', dataset + ' data', record_ctr, start_time)
+        # print '\n\n'
