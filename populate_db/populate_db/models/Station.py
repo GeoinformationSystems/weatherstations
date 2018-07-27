@@ -50,6 +50,10 @@ class Station(models.Model):
         null=True
     )
 
+    original = models.BooleanField(
+        default=True
+    )
+
     # additional speedup attributes - might not be useful?)
 
     # temporal interval in which data is available for this station

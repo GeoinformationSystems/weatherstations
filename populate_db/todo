@@ -1,7 +1,6 @@
 to do:
 - combine close stations
 
-
 StationData.objects.filter(station=Station.objects.filter(complete_data_rate__gte=0.8)).count()
 > 1455320
 
@@ -14,16 +13,13 @@ for s in ss: print s.country
 > ...
 > Antarctica
 
-# ADD POSTGIS TO DATABASE
+## create clean database
 
-connect to DB
-$ sudo su -i postgres
-$ psql
-# \c climatecharts_weatherstations
+sudo -u postgres psql -c "CREATE DATABASE climatecharts_weatherstations"
+sudo -u postgres psql -d climatecharts_weatherstations -c "CREATE EXTENSION postgis"
 
-add postgis extensioin to database
-# CREATE EXTENSION postgis;
-
-enable the stations table with a geometry column
-# ALTER TABLE populate_db_station ADD COLUMN geom geometry(Point, 4326);
-# UPDATE populate_db_station SET geom = ST_SetSRID(ST_MakePoint(lng, lat), 4326);
+## delete database if session connected
+SELECT pg_terminate_backend(pg_stat_activity.pid)
+    FROM pg_stat_activity
+    WHERE pg_stat_activity.datname = 'climatecharts_weatherstations'
+      AND pid <> pg_backend_pid();

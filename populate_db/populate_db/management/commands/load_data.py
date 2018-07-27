@@ -5,6 +5,9 @@
 # general python modules
 from haversine import haversine
 from itertools import islice
+import pandas as pd
+import numpy as np
+from sqlalchemy import create_engine
 
 # django modules
 from django.core.management.base import BaseCommand
@@ -25,9 +28,7 @@ from input_data import *
 # <option> =
 #   A = populate everything (station -> temp -> prcp)
 #   S = populate only stations (N.B: deletes temp and prcp data!)
-#   T = (re)populate only temperature
-#   P = (re)populate only precipitation
-#   U = update new temperature and preciptation from dataset
+#   D = (re)populate temperature and preciptation data
 
 ################################################################################
 # GLOBAL CONSTANTS
@@ -37,18 +38,14 @@ POSSIBLE_ARGUMENTS = \
     [
         'A', 'a',  # all data
         'S', 's',  # only stations
-        'T', 't',  # only temperature data
-        'P', 'p',  # only precipitation
-        'U', 'u'   # update to new temperature and precipitation
+        'D', 'd'  # (re)populate temperature and preciptation
     ]
 
 # maximum distance between two stations with the same id
 # to say that they are "the same" / have only slightly moved
 DISTANCE_THRESHOLD = 2.0  # [km]
 
-TEST_RUN = True
-
-TEST_SIZE = 10
+TEST_RUN = False
 
 
 ################################################################################
@@ -59,9 +56,7 @@ class Command(BaseCommand):
     help = "Populates the database with initial data. Three options \
             A = populate everything (station -> temp -> prcp) \
             S = populate only stations (N.B: deletes temp and prcp data!) \
-            T = (re)populate only temperature \
-            P = (re)populate only precipitation \
-            U = update new temperature and preciptation from dataset"
+            D = (re)populate temperature and precipitation data"
 
     # ==========================================================================
     # Handle additional populate options given to the command
@@ -92,52 +87,24 @@ class Command(BaseCommand):
         transaction.set_autocommit(False)
 
         # cleanup
-        num_station_data = StationData.objects.count()
-        if (str.upper(poption) == 'T') or (str.upper(poption) == 'P'):
-            station_data = StationData.objects.all()
-            cleanup_ctr = 0
-            for data in station_data:
-                if str.upper(poption) == 'T':
-                    data.temperature = None
-                else:  # poption == 'P'
-                    data.precipitation = None
-                data.is_complete = False
-                data.save()
-                cleanup_ctr += 1
-                if cleanup_ctr % BULK_SIZE == 0:
-                    transaction.commit()
-                    print \
-                        (
-                                str(cleanup_ctr).rjust(8)
-                                + ' records cleaned ('
-                                + str('%05.2f' % (100 * float(cleanup_ctr) / float(num_station_data)))
-                                + ' %)'
-                        )
-            transaction.commit()
-        elif str.upper(poption) == 'U':
-            pass
+        if str.upper(poption) == 'D':
+            print 'Deleting all ' + str(StationData.objects.count()) + ' StationData objects ... \n'
+            StationData.objects.all().delete()
         else:  # poption == 'A' or 'S':
+            print 'Deleting all ' + str(Station.objects.count()) + ' Station objects (and data) ... \n'
             Station.objects.all().delete()
             # also automatically deletes StationData!
-
+        transaction.commit()
         print 'FINISHED CLEANING DATABASE\n'
 
         # populate
-        if str.upper(poption) == 'T':
-            self.populate_data('temperature')
-        elif str.upper(poption) == 'P':
-            self.populate_data('precipitation')
-        elif str.upper(poption) == 'S':
+        if str.upper(poption) == 'S':
             self.populate_stations()
-        elif str.upper(poption) == 'U':
-            self.update_data()
+        elif str.upper(poption) == 'D':
+            self.populate_data()
         else:  # poption == 'A'
             self.populate_stations()
-            self.populate_data('temperature')
-            self.populate_data('precipitation')
-
-        # cleanup: manual database commits in bulks
-        transaction.set_autocommit(True)
+            self.populate_data()
 
     # ==========================================================================
     # Populate database with weather stations
@@ -147,7 +114,6 @@ class Command(BaseCommand):
 
         # COUNTRY CODES
         # -------------
-
         country_codes = {}
 
         with open(get_file(COUNTRY_CODES['path'])) as in_file:
@@ -179,12 +145,7 @@ class Command(BaseCommand):
             # for each weather station in file
             with open(get_file(stations['path'])) as in_file:
 
-                if TEST_RUN:
-                    n_lines = TEST_SIZE
-                else:
-                    n_lines = None
-
-                for line in islice(in_file, n_lines):
+                for line in islice(in_file, None):
 
                     id = get_int(
                         line,
@@ -364,270 +325,138 @@ class Command(BaseCommand):
                     # -> id, not object itself, since it will be deleted
                 )
                 new_duplicate.save()
-                station_duplicates[i].delete()
+                # station_duplicates[i].delete()
+                station_duplicates[i].original = False
+                station_duplicates[i].save()
 
                 duplicate_ctr += 1
                 if duplicate_ctr % BULK_SIZE == 0:
                     transaction.commit()
-                    print_time_statistics('removed', 'duplicates', duplicate_ctr, start_time, intermediate_time)
+                    print_time_statistics('removed', 'station duplicates', duplicate_ctr, start_time, intermediate_time)
                     intermediate_time = time.time()
 
                 # go to next station duplicate
                 i += 1
 
         transaction.commit()
-        print '\nFINISHED REMOVING DUPLICATES FROM DATABASE'
-        print_time_statistics('removed', 'duplicates', duplicate_ctr, start_time)
+        print '\nFINISHED REMOVING STATION DUPLICATES FROM DATABASE'
+        print_time_statistics('removed', 'station duplicates', duplicate_ctr, start_time)
         print ''
 
     # ==========================================================================
     # Populate database with data from precipitation or temperature dataset
     # ==========================================================================
+    def populate_data(self):
 
-    def populate_data(self, dataset):
+        # preparation for time measurement and
+        record_ctr = 0
+        start_time = time.time()
+        intermediate_time = start_time
 
-        # get reference to input dataset
+        # connection to postgres database
+        stationsdata_db = create_engine('postgresql://postgres:postgres@localhost:5432/climatecharts_weatherstations')
+
+        # read temperature file into dataframe
+        st = self.get_dataframe_from_data('temperature')
+        print_time_statistics('have read temperature data', '', record_ctr, start_time, intermediate_time)
+        intermediate_time = time.time()
+
+        # read precipitation file into dataframe
+        sp = self.get_dataframe_from_data('precipitation')
+        print_time_statistics('have read precipitation data', '', record_ctr, start_time, intermediate_time)
+        intermediate_time = time.time()
+
+        # join temperature and precipitation dataframes
+        df = pd.concat([st, sp], axis=1)
+        print_time_statistics('concated dataframe', '', record_ctr, start_time, intermediate_time)
+        intermediate_time = time.time()
+
+        # calculate new colum with boolean if temperature & precipitation is available for this dataset
+        df['is_complete'] = df.apply(lambda row: self.row_complete(row), axis=1)
+        print_time_statistics('new column added', '', record_ctr, start_time, intermediate_time)
+        intermediate_time = time.time()
+
+        # write results into database
+        df.to_sql('populate_db_stationdata', stationsdata_db, if_exists='append', index=True, chunksize=BULK_SIZE * 10)
+        print_time_statistics('FINISHED WRITING populate_db_stationdata TO DATABASE', '', record_ctr, start_time,
+                              intermediate_time)
+        intermediate_time = time.time()
+
+        # handle duplicates
+        duplicate_ctr = 0
+        stationdata_notfound_ctr = 0
+        multiple_stationdata_found_ctr = 0
+        #
+        # sort out all duplicate stations data and merge with master station
+        for duplicate_station in StationDuplicate.objects.all():
+            try:
+                for duplicate_station_data in StationData.objects.filter(station=duplicate_station.duplicate_station):
+                    try:
+                        master_station_data = StationData.objects.get(station=duplicate_station_data.station,
+                                                                      year=duplicate_station_data.year,
+                                                                      month=duplicate_station_data.month)
+                        # save only data from duplicate station if in master station is nothing saved yet
+                        if master_station_data.temperature is None:
+                            master_station_data.temperature = duplicate_station_data.temperature
+                        if master_station_data.precipitation is None:
+                            master_station_data.precipitation = duplicate_station_data.precipitation
+                        master_station_data.save()
+                        duplicate_station_data.delete()
+
+                        duplicate_ctr += 1
+                        if duplicate_ctr % BULK_SIZE == 0:
+                            transaction.commit()
+                            print_time_statistics('merged and removed', 'data duplicates', duplicate_ctr, start_time,
+                                                  intermediate_time)
+                            intermediate_time = time.time()
+                    except StationData.MultipleObjectsReturned:
+                        multiple_stationdata_found_ctr += 1
+                        print 'found multiple objects for ' + duplicate_station_data
+            except StationData.DoesNotExist:
+                stationdata_notfound_ctr += 1
+                print 'found no Station Data object for ' + duplicate_station
+
+        transaction.commit()
+        print '\nFINISHED REMOVING DATA DUPLICATES FROM DATABASE'
+        print_time_statistics('\tin total merged and removed', 'data duplicates', duplicate_ctr, intermediate_time)
+        print_time_statistics('\tin total number of StationData not matchable: ', '', stationdata_notfound_ctr,
+                              intermediate_time)
+        print_time_statistics('\tin total number of Multiple StationData errors: ', '', multiple_stationdata_found_ctr,
+                              intermediate_time)
+
+    def get_dataframe_from_data(self, dataset):
         input_data = DATASETS[dataset]['data']
 
-        # preparation for time measurement and
-        record_ctr = 0
-        start_time = time.time()
-        intermediate_time = start_time
-        total_time = start_time
+        # create names and column specification for pandas fwf function
+        colspecs = []
+        names = []
+        for columns in input_data['pandas_characters']:
+            colspecs.append(input_data['pandas_characters'][columns])
+            names.append(columns)
 
-        # for each data record in dataset
-        with open(get_file(input_data['path'])) as in_file:
-            for line in in_file:
-                station_id = get_int(
-                    line,
-                    input_data['characters']['station_id']
-                )
-                if TEST_RUN:
-                    try:
-                        Station.objects.get(id=station_id)
-                    except Station.DoesNotExist:
-                        continue
-                year = get_int(
-                    line,
-                    input_data['characters']['year']
-                )
+        nrows = 50000 if TEST_RUN else None
 
-                # get data for each month
-                monthly_data = [None]  # skip idx [0] => data starts at [1]
-                i = 1
-                while i <= NUM_MONTHS:
+        # pandas fwf can read and process large files very quickly and store it into a dataframe
+        fwf = pd.read_fwf(filepath_or_buffer=input_data['path'], colspecs=colspecs,
+                          delim_whitespace=True, header=None, names=names, index_col=[0, 1], nrows=nrows)
 
-                    # assemble month string '1', '2', ... , '12'
-                    month_str = str(i)
+        # bring dataframe in the right shape and convert it to a series
+        fwf.columns.name = 'month'
+        series = fwf.stack()
+        series.name = dataset
+        series.reset_index()
 
-                    # get raw data
-                    this_month_value = get_int(
-                        line,
-                        input_data['characters'][month_str]
-                    )
+        # replace null values
+        for null_value in input_data['null_values']:
+            series.replace(to_replace=int(null_value), value=np.nan, inplace=True)
 
-                    # if data has the null value, actually write null
-                    is_null = False
-                    for null_value in input_data['null_values']:
-                        if str(this_month_value) == null_value:
-                            monthly_data.append(None)
-                            is_null = True
+        # apply the division factor on the series values
+        series = series.apply(lambda x: x / input_data['division_factor'])
+        return series
 
-                    # else: divide value by divison factor in data
-                    # (converts int to float)
-                    if not is_null:
-                        monthly_data.append(
-                            float(this_month_value) / input_data['division_factor']
-                        )
-
-                    # next month
-                    i += 1
-
-                # get related station:
-                # 1) check in station duplicates
-                try:
-                    duplicate = StationDuplicate.objects.get(duplicate_station=station_id)
-                    station = duplicate.master_station
-
-                except:
-
-                    # 2) check in (master) stations
-                    try:
-                        station = Station.objects.get(id=station_id)
-
-                    except:
-                        print "Related station with id", id, "could not be  found"
-                        continue
-
-                # for each month
-                for month, value in enumerate(monthly_data):
-
-                    # ignore 0. month
-                    if value is None: continue
-
-                    # check if object (station->year->month) exists
-                    try:
-                        station_data = StationData.objects.get(
-                            station=station,
-                            year=year,
-                            month=month
-                        )
-                    # if it does not exist, create it
-                    except StationData.DoesNotExist:
-                        station_data = StationData(
-                            station=station,
-                            year=year,
-                            month=month
-                        )
-
-                    # update value for temperature / precipitation
-                    if dataset == 'temperature':
-                        station_data.temperature = value
-
-                    elif dataset == 'precipitation':
-                        station_data.precipitation = value
-
-                    # reset is_complete flag
-                    if (station_data.temperature is None) or (station_data.precipitation is None):
-                        station_data.is_complete = False
-                    else:
-                        station_data.is_complete = True
-
-                    # done!
-                    station_data.save()
-
-                    # go to next data
-                    record_ctr += 1
-
-                    # save each bulk to the database
-                    if record_ctr % BULK_SIZE == 0:
-                        transaction.commit()
-                        print_time_statistics('saved', dataset + ' data', record_ctr, start_time, intermediate_time)
-                        intermediate_time = time.time()
-
-        # finalize database writing
-        transaction.commit()
-        print '\nFINISHED WRITING ' + dataset.upper() + ' TO DATABASE'
-        print_time_statistics('saved', dataset + ' data', record_ctr, start_time)
-        print '\n\n'
-
-    def update_data(self):
-        # get reference to input dataset
-        #   input_data = DATASETS[dataset]['data']
-
-        # preparation for time measurement and
-        record_ctr = 0
-        start_time = time.time()
-        intermediate_time = start_time
-        total_time = start_time
-
-        # # for each data record in dataset
-        # with open(get_file(input_data['path'])) as in_file:
-        #     for line in in_file:
-        #         station_id = get_int(
-        #             line,
-        #             input_data['characters']['station_id']
-        #         )
-        #         year = get_int(
-        #             line,
-        #             input_data['characters']['year']
-        #         )
-        #
-        #         # get data for each month
-        #         monthly_data = [None]  # skip idx [0] => data starts at [1]
-        #         i = 1
-        #         while i <= NUM_MONTHS:
-        #
-        #             # assemble month string '1', '2', ... , '12'
-        #             month_str = str(i)
-        #
-        #             # get raw data
-        #             this_month_value = get_int(
-        #                 line,
-        #                 input_data['characters'][month_str]
-        #             )
-        #
-        #             # if data has the null value, actually write null
-        #             is_null = False
-        #             for null_value in input_data['null_values']:
-        #                 if str(this_month_value) == null_value:
-        #                     monthly_data.append(None)
-        #                     is_null = True
-        #
-        #             # else: divide value by divison factor in data
-        #             # (converts int to float)
-        #             if not is_null:
-        #                 monthly_data.append(
-        #                     float(this_month_value) / input_data['division_factor']
-        #                 )
-        #
-        #             # next month
-        #             i += 1
-        #
-        #         # get related station:
-        #         # 1) check in station duplicates
-        #         try:
-        #             duplicate = StationDuplicate.objects.get(duplicate_station=station_id)
-        #             station = duplicate.master_station
-        #
-        #         except:
-        #
-        #             # 2) check in (master) stations
-        #             try:
-        #                 station = Station.objects.get(id=station_id)
-        #
-        #             except:
-        #                 print "Related station with id", id, "could not be  found"
-        #                 continue
-        #
-        #         # for each month
-        #         for month, value in enumerate(monthly_data):
-        #
-        #             # ignore 0. month
-        #             if value is None: continue
-        #
-        #             # check if object (station->year->month) exists
-        #             try:
-        #                 station_data = StationData.objects.get(
-        #                     station=station,
-        #                     year=year,
-        #                     month=month
-        #                 )
-        #             # if it does not exist, create it
-        #             except StationData.DoesNotExist:
-        #                 station_data = StationData(
-        #                     station=station,
-        #                     year=year,
-        #                     month=month
-        #                 )
-        #
-        #             # update value for temperature / precipitation
-        #             if dataset == 'temperature':
-        #                 station_data.temperature = value
-        #
-        #             elif dataset == 'precipitation':
-        #                 station_data.precipitation = value
-        #
-        #             # reset is_complete flag
-        #             if (station_data.temperature is None) or (station_data.precipitation is None):
-        #                 station_data.is_complete = False
-        #             else:
-        #                 station_data.is_complete = True
-        #
-        #             # done!
-        #             station_data.save()
-        #
-        #             # go to next data
-        #             record_ctr += 1
-        #
-        #             # save each bulk to the database
-        #             if record_ctr % BULK_SIZE == 0:
-        #                 transaction.commit()
-        #                 print_time_statistics('saved', dataset + ' data', record_ctr, start_time, intermediate_time)
-        #                 intermediate_time = time.time()
-        #
-        # # finalize database writing
-        # transaction.commit()
-        # print '\nFINISHED WRITING ' + dataset.upper() + ' TO DATABASE'
-        # print_time_statistics('saved', dataset + ' data', record_ctr, start_time)
-        # print '\n\n'
+    # if temperature and precipitation is null the row is complete
+    def row_complete(self, row):
+        if np.isnan(row['temperature']) or np.isnan(row['precipitation']):
+            return False
+        else:
+            return True
