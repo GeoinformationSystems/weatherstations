@@ -27,7 +27,7 @@ from input_data import *
 ################################################################################
 
 # check only limited set of data
-TEST_RUN = True
+TEST_RUN = False
 
 
 ################################################################################
@@ -55,6 +55,7 @@ class Command(BaseCommand):
         station_ctr = 0
         start_time = time.time()
         intermediate_time = start_time
+        deactivated_ctr = 0
         # total_time = start_time
 
         # for each Station
@@ -145,6 +146,9 @@ class Command(BaseCommand):
             station.missing_months = num_missing_months
             station.complete_data_rate = complete_data_rate
             station.largest_gap = largest_gap
+            if complete_data_rate == 0.0:
+                deactivated_ctr += 1
+                station.original = False
             station.save()
 
             # session and time management
@@ -159,11 +163,12 @@ class Command(BaseCommand):
         # finalize
         transaction.commit()
         print 'FINISHED UPDATING DATABASE'
-        print_time_statistics('updated', 'stations', station_ctr, start_time)
+        print_time_statistics('in total updated', 'stations', station_ctr, start_time)
+        print_time_statistics('in total deactivated', 'stations', deactivated_ctr, start_time)
         print ''
 
         # data cleanup: delete all stations that have 0.0 coverage
-        Station.objects.filter(complete_data_rate=0.0).delete()
+        #Station.objects.filter(complete_data_rate=0.0).delete()
 
         # cleanup: manual database commits in bulks
         # transaction.set_autocommit(True)
