@@ -93,3 +93,13 @@ python /populate_db/manage.py <command> <option>
 	- `D`: (re)populate temperature and precipitation
 * `statistics`: create statistics about the quality of the data in the climate database
 * `update_stations`: update the climate database with statistically relevant data
+
+To transfer the data from development database to production database use the following commands:
+
+```bash
+# on development machine
+sudo -u postgres pg_dump --data-only --format=plain --table=populate_db_station --table=populate_db_stationdata --table=populate_db_stationduplicate climatecharts_weatherstations > uptodatedata.sql
+
+# on production machine 
+sudo -u postgres psql -d climatecharts_weatherstations -f uptodatedata.sql
+```

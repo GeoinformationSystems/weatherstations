@@ -13,6 +13,11 @@ from django.db import models
 # ==============================================================================
 
 class StationData(models.Model):
+    id = models.BigIntegerField(
+        primary_key=True,
+        db_index=True
+    )
+
     # foreign key
     station = models.ForeignKey(
         'Station',
@@ -66,4 +71,4 @@ class StationData(models.Model):
     # ----------------------------------------------------------------------------
     class Meta:
         app_label = 'populate_db'
-        ordering = ['station', 'year', 'month']
+        ordering = ['id']

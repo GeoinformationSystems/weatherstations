@@ -57,6 +57,10 @@ DATASETS = {
                             'elv': [57, 61],
                             'name': [12, 42],  # N.B. a country name can be inside
                         },
+                    'pandas_characters':
+                        {
+                            'station_id': [0, 11]
+                        }
                 },
             'data':
                 {
@@ -114,6 +118,10 @@ DATASETS = {
                             'elv': [31, 37],
                             'name': [38, 68],  # N.B. a country name can be inside
                         },
+                    'pandas_characters':
+                        {
+                            'station_id': [0, 11]
+                        }
                 },
             'data':
                 {
