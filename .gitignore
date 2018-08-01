@@ -1,6 +1,7 @@
 data/
 populate_db/migrations
 *.pyc
+*.iml
 
 api/.project
 api/.settings
