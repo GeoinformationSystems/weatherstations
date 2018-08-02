@@ -148,7 +148,6 @@ class Command(BaseCommand):
             station.largest_gap = largest_gap
             if complete_data_rate == 0.0:
                 deactivated_ctr += 1
-                station.original = False
             station.save()
 
             # session and time management
@@ -168,7 +167,7 @@ class Command(BaseCommand):
         print ''
 
         # data cleanup: delete all stations that have 0.0 coverage
-        #Station.objects.filter(complete_data_rate=0.0).delete()
+        # Station.objects.filter(complete_data_rate=0.0).delete()
 
         # cleanup: manual database commits in bulks
         # transaction.set_autocommit(True)
