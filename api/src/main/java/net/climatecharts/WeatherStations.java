@@ -16,6 +16,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * Weatherstations API for ClimateCharts server. Answers requests from the
@@ -122,8 +125,12 @@ public class WeatherStations {
             while (results.next()) {
                 int year = results.getInt("year");
                 int month = results.getInt("month");
-                float temp = results.getFloat("temperature");
-                float prec = results.getFloat("precipitation");
+                Float temp = results.getFloat("temperature");
+                if (results.wasNull())
+                    temp = null;
+                Float prec = results.getFloat("precipitation");
+                if (results.wasNull())
+                    prec = null;
 
                 int yearIdx = year - minYear;
                 int monthIdx = month - 1;
@@ -163,6 +170,7 @@ public class WeatherStations {
                 // sum up values for each year in this month
                 // count the gaps and values to calculate mean and determine the quality
                 float sum = 0.0f;
+                ArrayList<Float> median_calculations_list = new ArrayList<>();
                 int numValues = 0;
                 int numGaps = 0;
                 for (int yearIdx = 0; yearIdx < numYears; yearIdx++) {
@@ -171,19 +179,38 @@ public class WeatherStations {
                         numGaps++;
                     else {
                         sum += value;
+                        median_calculations_list.add(value);
                         numValues++;
                     }
                 }
 
-                // calculate mean
+                // calculate mean & median
                 Float mean = null;
+                Float median = null;
                 if (numValues > 0)
+                    // mean
                     mean = sum / numValues;
+                    //median
+                    Collections.sort(median_calculations_list);
+                    int middle = median_calculations_list.size() / 2;
+                    if (median_calculations_list.size() % 2 == 0)
+                    {
+                        float left = median_calculations_list.get(middle - 1);
+                        float right = median_calculations_list.get(middle);
+                        median = (left + right) / 2;
+                    }
+                    else
+                    {
+                        median =  median_calculations_list.get(middle);
+                    }
+
 
                 // write data
                 JSONObject thisMonth = new JSONObject();
                 thisMonth.put("rawData", yearlyValues);
                 thisMonth.put("mean", mean);
+                thisMonth.put("median", median);
+                thisMonth.put("month", monthIdx + 1);
                 thisMonth.put("numGaps", numGaps);
 
                 outputData.put(thisMonth);
@@ -192,6 +219,8 @@ public class WeatherStations {
 
         JSONObject stationData = new JSONObject();
         stationData.put("numYears", numYears);
+        stationData.put("minYear", minYear);
+        stationData.put("maxYear", maxYear);
         stationData.put("prec", precData);
         stationData.put("temp", tempData);
 
@@ -219,7 +248,10 @@ public class WeatherStations {
     }
 
     private String getAllStationsQuery() {
-        return "SELECT * FROM populate_db_station WHERE original = TRUE";
+        // select all stations, which are
+        //      * master stations => original = TRUE
+        //      * where at least one single entry with both temp and prec exists => complete_data_rate > 0.0
+        return "SELECT * FROM populate_db_station WHERE original = TRUE and complete_data_rate > 0.0";
     }
 
     private String getStationDataQuery(long stationId, int minYear, int maxYear) {
