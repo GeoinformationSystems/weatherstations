@@ -80,7 +80,7 @@ python /populate_db/manage.py migrate
 
 ### Usage
 
-The project provides different commands to handle the data. Use them with the following syntax:
+The project provides different commands to handle the data. Use them with the following syntax (within the projects root folder):
 
 ```bash
 python /populate_db/manage.py <command> <option>
@@ -94,12 +94,15 @@ python /populate_db/manage.py <command> <option>
 * `statistics`: create statistics about the quality of the data in the climate database
 * `update_stations`: update the climate database with statistically relevant data
 
+For a newly created database it is recommended to run the `load_data A` command followed by the `update_stations` command.
+
 To transfer the data from development database to production database use the following commands:
 
 ```bash
 # on development machine
+# use the option -format=custom fo ra compressed version 
 sudo -u postgres pg_dump --data-only --format=plain --table=populate_db_station --table=populate_db_stationdata --table=populate_db_stationduplicate climatecharts_weatherstations > uptodatedata.sql
 
-# on production machine 
+# on production machine
 sudo -u postgres psql -d climatecharts_weatherstations -f uptodatedata.sql
 ```

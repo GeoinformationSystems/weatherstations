@@ -69,11 +69,10 @@ class Command(BaseCommand):
             min_year = station_datas.aggregate(Min('year'))['year__min']
             max_year = station_datas.aggregate(Max('year'))['year__max']
 
-            if TEST_RUN:
-                if min_year is None:
-                    min_year = 0
-                if max_year is None:
-                    max_year = 0
+            if min_year is None:
+                min_year = 0
+            if max_year is None:
+                max_year = 0
 
             # get total number of months that lack either temp or prcp data
             missing_months = station_datas.filter(is_complete=False)

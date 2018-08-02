@@ -379,12 +379,6 @@ class Command(BaseCommand):
         print_time_statistics('new column added', '', record_ctr, start_time, intermediate_time)
         intermediate_time = time.time()
 
-        # write results into database
-        # df.to_sql('populate_db_stationdata', stationsdata_db, if_exists='append', index=True, chunksize=BULK_SIZE * 10)
-        # dshape = 'var *{id: int4, temperature: '
-
-        # odo(df, 'postgresql://postgres:postgres@localhost:5432/climatecharts_weatherstations::populate_db_stationdata',)
-        # engine = create_engine('postgresql+psycopg2://username:password@host:port/database')
         conn = stationsdata_db.raw_connection()
         cur = conn.cursor()
         output = io.BytesIO()
@@ -417,7 +411,7 @@ class Command(BaseCommand):
         # sort out all duplicate stations data and merge with master station
         for duplicate_station in StationDuplicate.objects.all():
             station_current_nr += 1
-            print '\nhandling Station Data object: ' + duplicate_station + '(' + station_current_nr + ' of ' + station_duplicates_count + ')'
+            print '\nhandling Station Data object: ' + str(duplicate_station) + ' (' + str(station_current_nr) + ' of ' + str(station_duplicates_count) + ')'
             try:
                 # merge every single duplicate date set with its master date set
                 for duplicate_station_data in StationData.objects.filter(station=duplicate_station.duplicate_station):
@@ -449,15 +443,15 @@ class Command(BaseCommand):
                             intermediate_time = time.time()
                     except StationData.MultipleObjectsReturned:
                         multiple_stationdata_found_ctr += 1
-                        print '\nfound multiple objects for ' + duplicate_station_data
+                        print '\nfound multiple objects for ' + str(duplicate_station_data)
             except StationData.DoesNotExist:
                 stationdata_notfound_ctr += 1
-                print '\nfound no Station Data object for ' + duplicate_station
+                print '\nfound no Station Data object for ' + str(duplicate_station)
 
         transaction.commit()
         print '\nFINISHED REMOVING DATA DUPLICATES FROM DATABASE'
-        print_time_statistics('\tin total merged and removed', 'data duplicates', duplicate_ctr, intermediate_time)
-        print_time_statistics('\tin total number of StationData not matchable: ', '', stationdata_notfound_ctr,
+        print_time_statistics('\tin total merged and removed', 'data duplicates', duplicate_ctr, start_time, intermediate_time)
+        print_time_statistics('\tin total number of StationData not matchable: ', '', stationdata_notfound_ctr, start_time,
                               intermediate_time)
         print_time_statistics('\tin total number of Multiple StationData errors: ', '', multiple_stationdata_found_ctr,
                               intermediate_time)
