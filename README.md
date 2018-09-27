@@ -100,9 +100,38 @@ To transfer the data from development database to production database use the fo
 
 ```bash
 # on development machine
-# use the option -format=custom fo ra compressed version 
+# use the option -format=custom for a compressed version
 sudo -u postgres pg_dump --data-only --format=plain --table=populate_db_station --table=populate_db_stationdata --table=populate_db_stationduplicate climatecharts_weatherstations > uptodatedata.sql
 
 # on production machine
 sudo -u postgres psql -d climatecharts_weatherstations -f uptodatedata.sql
 ```
+
+# License
+
+The WeatherStations project is lincensed under the Apache License 2.0.
+
+## Java Libraries
+
+This project uses a collection of Java libraries:
+
+* javax.servlet 3.1.0 - GPL2
+* org.json 20151123 - JSON
+* commons-io 2.4 - Apache 2.0
+* org.apache.commons 3.4 - Apache 2.0
+* org.apache.httpcomponents 4.5.2
+* com.sun.jersey 1.19 - GPL 1.1
+* junit 4.12 - EPL 1.0
+* postgresql 9.3-1102.jdbc41 - BSD 2-clause
+* javax.xml.bind 2.4.0 - CDDL 1.1
+
+## Python Libraries
+
+This project uses a collection of Python libraries:
+
+* django - BSD license
+* haversine - MIT license
+* psycopg2 - LGPL license
+* pandas - BSD license
+* numpy - BSD license
+* sqlalchemy - MIT license
