@@ -1,0 +1,6 @@
+django
+haversine
+psycopg2
+pandas
+numpy
+sqlalchemy

@@ -1,0 +1,25 @@
+to do:
+- combine close stations
+
+StationData.objects.filter(station=Station.objects.filter(complete_data_rate__gte=0.8)).count()
+> 1455320
+
+100*sda.count()/StationData.objects.count()
+> 9
+
+ss=Station.objects.filter(complete_data_rate__gte=0.75)
+for s in ss: print s.country
+> Algeria
+> ...
+> Antarctica
+
+## create clean database
+
+sudo -u postgres psql -c "CREATE DATABASE climatecharts_weatherstations"
+sudo -u postgres psql -d climatecharts_weatherstations -c "CREATE EXTENSION postgis"
+
+## delete database if session connected
+SELECT pg_terminate_backend(pg_stat_activity.pid)
+    FROM pg_stat_activity
+    WHERE pg_stat_activity.datname = 'climatecharts_weatherstations'
+      AND pid <> pg_backend_pid();
