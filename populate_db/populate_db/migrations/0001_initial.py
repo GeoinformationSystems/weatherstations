@@ -40,8 +40,8 @@ class Migration(migrations.Migration):
             name='StationData',
             fields=[
                 ('id', models.BigIntegerField(db_index=True, primary_key=True, serialize=False)),
-                ('year', models.PositiveSmallIntegerField(default=b'2017')),
-                ('month', models.PositiveSmallIntegerField(default=b'1')),
+                ('year', models.PositiveSmallIntegerField(default='2019')),
+                ('month', models.PositiveSmallIntegerField(default='1')),
                 ('temperature', models.DecimalField(blank=True, decimal_places=2, default=None, max_digits=4, null=True)),
                 ('precipitation', models.DecimalField(blank=True, decimal_places=1, default=None, max_digits=5, null=True)),
                 ('is_complete', models.BooleanField(default=False)),

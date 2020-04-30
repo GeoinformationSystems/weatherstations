@@ -6,6 +6,7 @@ populate_db/migrations
 api/.project
 api/.settings
 api/.classpath
+.vscode/
 
 populate_db/venv
 populate_db/env

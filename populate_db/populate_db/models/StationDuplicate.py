@@ -27,6 +27,7 @@ class StationDuplicate(models.Model):
     master_station = models.ForeignKey(
         'Station',
         related_name='master_station',
+        on_delete=models.CASCADE,
         db_index=True
     )
 

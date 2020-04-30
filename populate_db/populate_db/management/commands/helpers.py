@@ -123,4 +123,4 @@ def print_time_statistics(
                      + ' s'
                      )
 
-    print print_str
+    print (print_str)

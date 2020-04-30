@@ -187,7 +187,7 @@ public class WeatherStations {
                 // calculate mean & median
                 Float mean = null;
                 Float median = null;
-                if (numValues > 0)
+                if (numValues > 0) {
                     // mean
                     mean = sum / numValues;
                     //median
@@ -203,7 +203,7 @@ public class WeatherStations {
                     {
                         median =  median_calculations_list.get(middle);
                     }
-
+                }
 
                 // write data
                 JSONObject thisMonth = new JSONObject();
