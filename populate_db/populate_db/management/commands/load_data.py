@@ -16,9 +16,9 @@ from django.db import transaction
 from django.contrib.gis.geos import Point
 
 # own modules
-from populate_db.models import *
-from populate_db.management.commands.helpers import *
-from populate_db.management.commands.input_data import *
+from populate_db.populate_db.models import Station, StationData, StationDuplicate
+from populate_db.populate_db.management.commands.input_data import *
+from populate_db.populate_db.management.commands.helpers import *
 
 ################################################################################
 # POPULATE THE CLIMATE DATABASE WITH WEATHER STATIONS DATA
