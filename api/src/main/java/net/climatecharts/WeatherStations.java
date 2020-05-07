@@ -17,7 +17,6 @@ import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 
 /**
@@ -87,9 +86,17 @@ public class WeatherStations {
             }
             results.close();
             statement.close();
+            conn.close();
         } catch (SQLException e) {
             System.err.println("Error in execution of the SQL Statement");
             System.err.println(e.getMessage());
+        } finally {
+            try {
+               if(conn!=null)
+                  conn.close();
+            } catch (SQLException e) {
+               e.printStackTrace();
+            }
         }
 
         // format them into a JSON string and return
@@ -141,9 +148,17 @@ public class WeatherStations {
             }
             results.close();
             statement.close();
+            conn.close();
         } catch (SQLException e) {
             System.err.println("Error in execution of the SQL Statement");
             System.err.println(e.getMessage());
+        } finally {
+            try {
+               if(conn!=null)
+                  conn.close();
+            } catch (SQLException e) {
+               e.printStackTrace();
+            }
         }
 
         // create final JSON object structure
