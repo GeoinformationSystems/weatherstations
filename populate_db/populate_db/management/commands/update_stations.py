@@ -10,9 +10,9 @@ from django.db import transaction
 from django.db.models import *
 
 # own modules
-from populate_db.populate_db.models import Station, StationData, StationDuplicate
-from populate_db.populate_db.management.commands.helpers import *
-from populate_db.populate_db.management.commands.input_data import *
+from populate_db.models import Station, StationData, StationDuplicate
+from populate_db.management.commands.helpers import *
+from populate_db.management.commands.input_data import *
 
 ################################################################################
 # UPDATE THE CLIMATE DATABASE (STATIONS) WITH STATISTICALLY RELEVANT DATA
