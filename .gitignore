@@ -4,8 +4,10 @@ populate_db/migrations
 *.iml
 
 api/.project
-api/.settings
 api/.classpath
+api/.settings/
+api/.vscode/
+api/target/
 
 populate_db/venv
 populate_db/env

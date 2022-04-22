@@ -16,9 +16,9 @@ from django.db import transaction
 from django.contrib.gis.geos import Point
 
 # own modules
-from populate_db.models import *
+from populate_db.models import Station, StationData, StationDuplicate
+from populate_db.management.commands.input_data import *
 from populate_db.management.commands.helpers import *
-from input_data import *
 
 ################################################################################
 # POPULATE THE CLIMATE DATABASE WITH WEATHER STATIONS DATA
@@ -79,9 +79,9 @@ class Command(BaseCommand):
 
         # test: is poption correct?
         if poption not in POSSIBLE_ARGUMENTS:
-            print 'The argument you have given is not supported'
-            print 'Please add one of the following: ' \
-                  + (', '.join(POSSIBLE_ARGUMENTS))
+            print ('The argument you have given is not supported')
+            print ('Please add one of the following: ' \
+                  + (', '.join(POSSIBLE_ARGUMENTS)))
             return
 
         # speedup: manual database commits in bulks
@@ -89,14 +89,14 @@ class Command(BaseCommand):
 
         # cleanup
         if str.upper(poption) == 'D':
-            print 'Deleting all ' + str(StationData.objects.count()) + ' StationData objects ... \n'
+            print ('Deleting all ' + str(StationData.objects.count()) + ' StationData objects ... \n')
             StationData.objects.all().delete()
         else:  # poption == 'A' or 'S':
-            print 'Deleting all ' + str(Station.objects.count()) + ' Station objects (and data) ... \n'
+            print ('Deleting all ' + str(Station.objects.count()) + ' Station objects (and data) ... \n')
             Station.objects.all().delete()
             # also automatically deletes StationData!
         transaction.commit()
-        print 'FINISHED CLEANING DATABASE\n'
+        print ('FINISHED CLEANING DATABASE\n')
 
         # populate
         if str.upper(poption) == 'S':
@@ -205,9 +205,9 @@ class Command(BaseCommand):
                         intermediate_time = time.time()
 
         transaction.commit()
-        print '\nFINISHED WRITING STATIONS TO DATABASE'
+        print ('\nFINISHED WRITING STATIONS TO DATABASE')
         print_time_statistics('saved', 'stations', station_ctr, start_time)
-        print ''
+        print ('')
 
         # MERGE DUPLICATES
         # ----------------
@@ -293,9 +293,9 @@ class Command(BaseCommand):
                     j += 1
                 i += 1
 
-        print '\nFINISHED IDENTIFYING DUPLICATES IN DATABASE'
+        print ('\nFINISHED IDENTIFYING DUPLICATES IN DATABASE')
         print_time_statistics('found', 'duplicates', duplicate_ctr, start_time)
-        print ''
+        print ('')
 
         # handle duplicates
         duplicate_ctr = 0
@@ -337,9 +337,9 @@ class Command(BaseCommand):
                 i += 1
 
         transaction.commit()
-        print '\nFINISHED REMOVING STATION DUPLICATES FROM DATABASE'
+        print ('\nFINISHED REMOVING STATION DUPLICATES FROM DATABASE')
         print_time_statistics('removed', 'station duplicates', duplicate_ctr, start_time)
-        print ''
+        print ('')
 
     # ==========================================================================
     # Populate database with data from precipitation or temperature dataset
@@ -381,7 +381,7 @@ class Command(BaseCommand):
 
         conn = stationsdata_db.raw_connection()
         cur = conn.cursor()
-        output = io.BytesIO()
+        output = io.StringIO()
         df = df.reset_index()
         # print (df.columns.tolist())
         df = df[['year', 'month', 'temperature', 'precipitation', 'is_complete', 'station_id']]
@@ -411,7 +411,7 @@ class Command(BaseCommand):
         # sort out all duplicate stations data and merge with master station
         for duplicate_station in StationDuplicate.objects.all():
             station_current_nr += 1
-            print '\nhandling Station Data object: ' + str(duplicate_station) + ' (' + str(station_current_nr) + ' of ' + str(station_duplicates_count) + ')'
+            print ('\nhandling Station Data object: ' + str(duplicate_station) + ' (' + str(station_current_nr) + ' of ' + str(station_duplicates_count) + ')')
             try:
                 # merge every single duplicate date set with its master date set
                 for duplicate_station_data in StationData.objects.filter(station=duplicate_station.duplicate_station):
@@ -443,13 +443,13 @@ class Command(BaseCommand):
                             intermediate_time = time.time()
                     except StationData.MultipleObjectsReturned:
                         multiple_stationdata_found_ctr += 1
-                        print '\nfound multiple objects for ' + str(duplicate_station_data)
+                        print ('\nfound multiple objects for ' + str(duplicate_station_data))
             except StationData.DoesNotExist:
                 stationdata_notfound_ctr += 1
-                print '\nfound no Station Data object for ' + str(duplicate_station)
+                print ('\nfound no Station Data object for ' + str(duplicate_station))
 
         transaction.commit()
-        print '\nFINISHED REMOVING DATA DUPLICATES FROM DATABASE'
+        print ('\nFINISHED REMOVING DATA DUPLICATES FROM DATABASE')
         print_time_statistics('\tin total merged and removed', 'data duplicates', duplicate_ctr, start_time, intermediate_time)
         print_time_statistics('\tin total number of StationData not matchable: ', '', stationdata_notfound_ctr, start_time,
                               intermediate_time)

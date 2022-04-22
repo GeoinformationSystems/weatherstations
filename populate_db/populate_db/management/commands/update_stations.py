@@ -10,9 +10,9 @@ from django.db import transaction
 from django.db.models import *
 
 # own modules
-from populate_db.models import *
+from populate_db.models import Station, StationData, StationDuplicate
 from populate_db.management.commands.helpers import *
-from input_data import *
+from populate_db.management.commands.input_data import *
 
 ################################################################################
 # UPDATE THE CLIMATE DATABASE (STATIONS) WITH STATISTICALLY RELEVANT DATA
@@ -87,6 +87,7 @@ class Command(BaseCommand):
 
             # identify gaps = consecutive missing months
             gaps = [0] * (MAX_GAP + 1)  # final list: number of gaps per gap size
+            gap = 0
             largest_gap = 0  # largest gap found so far
             currently_in_gap = False  # currently in a gap
             curr_gap_size = 0  # size of current gap
@@ -160,10 +161,10 @@ class Command(BaseCommand):
 
         # finalize
         transaction.commit()
-        print 'FINISHED UPDATING DATABASE'
+        print ('FINISHED UPDATING DATABASE')
         print_time_statistics('in total updated', 'stations', station_ctr, start_time)
         print_time_statistics('in total deactivated', 'stations', deactivated_ctr, start_time)
-        print ''
+        print ('')
 
         # data cleanup: delete all stations that have 0.0 coverage
         # Station.objects.filter(complete_data_rate=0.0).delete()

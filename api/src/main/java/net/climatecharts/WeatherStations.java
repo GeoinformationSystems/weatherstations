@@ -17,7 +17,6 @@ import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 
 /**
@@ -87,9 +86,17 @@ public class WeatherStations {
             }
             results.close();
             statement.close();
+            conn.close();
         } catch (SQLException e) {
             System.err.println("Error in execution of the SQL Statement");
             System.err.println(e.getMessage());
+        } finally {
+            try {
+               if(conn!=null)
+                  conn.close();
+            } catch (SQLException e) {
+               e.printStackTrace();
+            }
         }
 
         // format them into a JSON string and return
@@ -141,9 +148,17 @@ public class WeatherStations {
             }
             results.close();
             statement.close();
+            conn.close();
         } catch (SQLException e) {
             System.err.println("Error in execution of the SQL Statement");
             System.err.println(e.getMessage());
+        } finally {
+            try {
+               if(conn!=null)
+                  conn.close();
+            } catch (SQLException e) {
+               e.printStackTrace();
+            }
         }
 
         // create final JSON object structure
@@ -187,7 +202,7 @@ public class WeatherStations {
                 // calculate mean & median
                 Float mean = null;
                 Float median = null;
-                if (numValues > 0)
+                if (numValues > 0) {
                     // mean
                     mean = sum / numValues;
                     //median
@@ -203,7 +218,7 @@ public class WeatherStations {
                     {
                         median =  median_calculations_list.get(middle);
                     }
-
+                }
 
                 // write data
                 JSONObject thisMonth = new JSONObject();

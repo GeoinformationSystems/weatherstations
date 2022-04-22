@@ -22,12 +22,13 @@ class StationData(models.Model):
     station = models.ForeignKey(
         'Station',
         related_name="station",
+        on_delete=models.CASCADE,
         db_index=True
     )
 
     # main attributes
     year = models.PositiveSmallIntegerField(
-        default='2017'
+        default='2019'
     )
 
     month = models.PositiveSmallIntegerField(
