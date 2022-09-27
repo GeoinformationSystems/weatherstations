@@ -115,15 +115,13 @@ The WeatherStations project is lincensed under the Apache License 2.0.
 
 This project uses a collection of Java libraries:
 
-* javax.servlet 3.1.0 - GPL2
-* org.json 20151123 - JSON
+* javax.servlet 4.0.1 - GPL2
+* org.json 20220924 - JSON
 * commons-io 2.11.0 - Apache 2.0
-* org.apache.commons 3.4 - Apache 2.0
-* org.apache.httpcomponents 4.5.13
+* org.apache.httpcomponents 4.5.13 - Apache 2.0
 * com.sun.jersey 1.19 - GPL 1.1
 * junit 4.13.1 - EPL 1.0
-* org.postgresql 42.3.4 - BSD 2-clause
-* javax.xml.bind 2.4.0 - CDDL 1.1
+* org.postgresql 42.5.0 - BSD 2-clause
 
 ## Python Libraries
 
