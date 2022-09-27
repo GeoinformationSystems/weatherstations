@@ -98,14 +98,14 @@ class Command(BaseCommand):
                     intermediate_time = time.time()
 
         transaction.commit()
-        print '\nFINISHED WRITING STATIONS TO DATABASE'
+        print ('\nFINISHED WRITING STATIONS TO DATABASE')
         print_time_statistics \
         (
             'stations',
             station_ctr,
             start_time
         )
-        print ''
+        print ('')
 
 
         # cleanup: manual database commits in bulks

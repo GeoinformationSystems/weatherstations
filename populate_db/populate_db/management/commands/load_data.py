@@ -13,6 +13,7 @@ import io
 # django modules
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.conf import settings
 from django.contrib.gis.geos import Point
 
 # own modules
@@ -352,7 +353,13 @@ class Command(BaseCommand):
         intermediate_time = start_time
 
         # connection to postgres database
-        stationsdata_db = create_engine('postgresql://postgres:postgres@localhost:5432/climatecharts_weatherstations')
+        stationsdata_db = create_engine('postgresql://' 
+            + settings.DATABASES['default']['USER'] 
+            + ':' + settings.DATABASES['default']['PASSWORD'] 
+            + '@' + settings.DATABASES['default']['HOST']
+            + ':' + settings.DATABASES['default']['PORT']
+            + '/' + settings.DATABASES['default']['NAME']
+            )
 
         # get all possible stations fresh from file
         possible_stations_df = pd.concat([self.get_dataframe_from_stations('temperature'),
