@@ -165,4 +165,37 @@ DATASETS = {
                         },
                 },
         },
+    'precipitationV4Raw':
+        {
+            'stations':
+                {
+                    'path': 'data/metaV4/prec/ghcn-m_v4_prcp_inventory.txt',
+                    'null_values': ['99999'],
+                    'characters':
+                        {
+                            'station_id': [0, 10],
+                            'lat': [12, 19],
+                            'lng': [21, 30],
+                            'elv': [31, 36],
+                            'name': [41, 78],  # N.B. a country name can be inside
+                        },
+                    'pandas_characters':
+                        {
+                            'station_id': [0, 11]
+                        }
+                },
+            'data':
+                {
+                    'folder': '/data/GHCN_monthly_v4_precipitation_raw/',
+                    'division_factor': 10,
+                    'null_values': ['-9999', '-8888'],
+                    'characters':
+                        {
+                            'station_id': [0, 10],
+                            'year': [83, 86],
+                            'month': [87, 88],
+                            'value': [90, 95]
+                        },
+                }
+        },
 }
