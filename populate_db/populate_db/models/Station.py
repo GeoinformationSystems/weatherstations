@@ -17,18 +17,14 @@ from django.contrib.gis.db import models
 
 class Station(models.Model):
     # main attributes
-    id = models.BigIntegerField(
+    id = models.CharField(
+        max_length=11,
         primary_key=True,
         db_index=True
     )
 
     name = models.CharField(
         max_length=32
-    )
-
-    country = models.CharField(
-        max_length=52,
-        null=True
     )
 
     lat = models.DecimalField(
@@ -47,6 +43,11 @@ class Station(models.Model):
     )
 
     elev = models.IntegerField(
+        null=True
+    )
+
+    country = models.CharField(
+        max_length=64,
         null=True
     )
 

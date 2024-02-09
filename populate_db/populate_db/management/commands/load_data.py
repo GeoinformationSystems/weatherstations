@@ -7,7 +7,7 @@ from haversine import haversine
 from itertools import islice
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
+import psycopg2
 import io
 
 # django modules
@@ -120,7 +120,7 @@ class Command(BaseCommand):
 
         with open(get_file(COUNTRY_CODES['path'])) as in_file:
             for line in in_file:
-                code = get_int(
+                code = get_string(
                     line,
                     COUNTRY_CODES['characters']['code']
                 )
@@ -148,9 +148,14 @@ class Command(BaseCommand):
 
                 for line in islice(in_file, None):
 
-                    id = get_int(
+                    id = get_string(
                         line,
                         stations['characters']['station_id']
+                    )
+
+                    country_code = get_string(
+                        line,
+                        stations['characters']['country_code']
                     )
 
                     lat = get_float(
@@ -181,7 +186,7 @@ class Command(BaseCommand):
                             elev = None
 
                     # get country name from country code
-                    country = country_codes.get(int(str(id)[0:3]))
+                    country = country_codes.get(country_code)
 
                     # geom transformation
                     geom = Point(lng, lat)
@@ -347,19 +352,10 @@ class Command(BaseCommand):
     # ==========================================================================
     def populate_data(self):
 
-        # preparation for time measurement and
+        # preparation for time measurement
         record_ctr = 0
         start_time = time.time()
         intermediate_time = start_time
-
-        # connection to postgres database
-        stationsdata_db = create_engine('postgresql://' 
-            + settings.DATABASES['default']['USER'] 
-            + ':' + settings.DATABASES['default']['PASSWORD'] 
-            + '@' + settings.DATABASES['default']['HOST']
-            + ':' + settings.DATABASES['default']['PORT']
-            + '/' + settings.DATABASES['default']['NAME']
-            )
 
         # get all possible stations fresh from file
         possible_stations_df = pd.concat([self.get_dataframe_from_stations('temperature'),
@@ -386,26 +382,31 @@ class Command(BaseCommand):
         print_time_statistics('new column added', '', record_ctr, start_time, intermediate_time)
         intermediate_time = time.time()
 
-        conn = stationsdata_db.raw_connection()
+        # connection to postgres database
+        conn = psycopg2.connect(database=settings.DATABASES['default']['NAME'],
+                host=settings.DATABASES['default']['HOST'],
+                user=settings.DATABASES['default']['USER'],
+                password=settings.DATABASES['default']['PASSWORD'],
+                port=settings.DATABASES['default']['PORT'])
         cur = conn.cursor()
         output = io.StringIO()
         df = df.reset_index()
-        # print (df.columns.tolist())
         df = df[['year', 'month', 'temperature', 'precipitation', 'is_complete', 'station_id']]
-        # print (df.columns.tolist())
         df.to_csv(output, header=False, sep='\x01', index=True)
         output.seek(0)
         print_time_statistics('written to CSV', '', record_ctr, start_time, intermediate_time)
-        # contents = output.getvalue()
+        intermediate_time = time.time()
+
         cur.copy_from(output, 'populate_db_stationdata', sep='\x01', null='')
         print_time_statistics('copy_from ready', '', record_ctr, start_time, intermediate_time)
+        intermediate_time = time.time()
+
         conn.commit()
         print_time_statistics('commit finished', '', record_ctr, start_time, intermediate_time)
+        intermediate_time = time.time()
 
-        cur.close()
-        # df.to_csv(path_or_buf='out.csv', chunksize=BULK_SIZE)
-        print_time_statistics('FINISHED WRITING populate_db_stationdata TO DATABASE', '', record_ctr, start_time,
-                              intermediate_time)
+        conn.close()
+        print_time_statistics('FINISHED WRITING populate_db_stationdata TO DATABASE', '', record_ctr, start_time, intermediate_time)
         intermediate_time = time.time()
 
         # handle duplicates
@@ -445,8 +446,7 @@ class Command(BaseCommand):
                         duplicate_ctr += 1
                         if duplicate_ctr % BULK_SIZE == 0:
                             transaction.commit()
-                            print_time_statistics('merged and removed', 'data duplicates', duplicate_ctr, start_time,
-                                                  intermediate_time)
+                            print_time_statistics('merged and removed', 'data duplicates', duplicate_ctr, start_time, intermediate_time)
                             intermediate_time = time.time()
                     except StationData.MultipleObjectsReturned:
                         multiple_stationdata_found_ctr += 1
@@ -458,10 +458,8 @@ class Command(BaseCommand):
         transaction.commit()
         print ('\nFINISHED REMOVING DATA DUPLICATES FROM DATABASE')
         print_time_statistics('\tin total merged and removed', 'data duplicates', duplicate_ctr, start_time, intermediate_time)
-        print_time_statistics('\tin total number of StationData not matchable: ', '', stationdata_notfound_ctr, start_time,
-                              intermediate_time)
-        print_time_statistics('\tin total number of Multiple StationData errors: ', '', multiple_stationdata_found_ctr,
-                              intermediate_time)
+        print_time_statistics('\tin total number of StationData not matchable: ', '', stationdata_notfound_ctr, start_time, intermediate_time)
+        print_time_statistics('\tin total number of Multiple StationData errors: ', '', multiple_stationdata_found_ctr, intermediate_time)
 
     def get_dataframe_from_data(self, dataset, duplicate_filter=None):
         input_data = DATASETS[dataset]['data']

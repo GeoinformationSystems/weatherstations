@@ -44,22 +44,24 @@ For the correct usage of `populate_db` it is required to have a default data str
 
 ```
 data
-+-- GHCN_monthly_v2_precipitation
-|   +-- v2.prcp
-|   +-- v2.prcp.inv
-+-- GHCN_monthly_v3_temperature
-|   +-- ghcnm.tavg.v3.3.0.latest.qca.dat
-|   +-- ghcnm.tavg.v3.3.0.latest.qca.inv
++-- GHCN_monthly_prec
+|   +-- ghcn-m_v4_prcp_inventory.txt
+|   +-- v4_raw
+|   |   +-- single CSV files
++-- GHCN_monthly_temp
+|   +-- ghcnm.tavg.v4.0.1.latest.qcf.dat
+|   +-- ghcnm.tavg.v4.0.1.latest.qcf.inv
 +-- meta
-|   +-- v2.country.codes
+|   +-- ghcnm-countries.txt
 +-- qgis
 ```
 
 Download the datasets from:
-* `v2.prcp`: uncompress [ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/v2/v2.prcp.Z](ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/v2/v2.prcp.Z)
-* `v2.prcp.inv`: [ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/v2/v2.prcp.inv](ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/v2/v2.prcp.inv)
-* `ghcnm.tavg.v3.3.0.latest.qca.dat` and `ghcnm.tavg.v3.3.0.latest.qca.inv`: uncompress [ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/v3/ghcnm.tavg.latest.qca.tar.gz](ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/v3/ghcnm.tavg.latest.qca.tar.gz) and **rename file name** -> replace date with "latest", eg. ghcnm.tavg.v3.3.0.20180719.qca.inv => ghcnm.tavg.v3.3.0.latest.qca.inv
-* `v2.country.codes`: [ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/v2/v2.country.codes](ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/v2/v2.country.codes)
+* `va_raw`: uncompress archive under [https://www.ncei.noaa.gov/data/ghcnm/v4beta/archive/](https://www.ncei.noaa.gov/data/ghcnm/v4beta/archive/)
+* `ghcn-m_v4_prcp_inventory.txt`: [https://www.ncei.noaa.gov/data/ghcnm/v4beta/doc/ghcn-m_v4_prcp_inventory.txt](https://www.ncei.noaa.gov/data/ghcnm/v4beta/doc/ghcn-m_v4_prcp_inventory.txt)
+* `ghcnm.tavg.v4.0.1.latest.qcf.dat` and `ghcnm.tavg.v4.0.1.latest.qcf.inv`: uncompress [https://www.ncei.noaa.gov/pub/data/ghcn/v4/ghcnm.tavg.latest.qcf.tar.gz](https://www.ncei.noaa.gov/pub/data/ghcn/v4/ghcnm.tavg.latest.qcf.tar.gz) and **rename file name** -> replace date with "latest", eg. ghcnm.tavg.v4.0.1.20240205.qcf.inv =>ghcnm.tavg.v4.0.1.latest.qcf.inv
+* `ghcnm-countries.txt`: [https://www.ncei.noaa.gov/pub/data/ghcn/v4/ghcnm-countries.txt](https://www.ncei.noaa.gov/pub/data/ghcn/v4/ghcnm-countries.txt)
+
 
 #### Database
 
@@ -74,8 +76,8 @@ sudo -u postgres psql -d climatecharts_weatherstations -c "CREATE EXTENSION post
 Connect Django to the database:
 
 ```bash
-python /populate_db/manage.py makemigrations
-python /populate_db/manage.py migrate
+python populate_db/manage.py makemigrations
+python populate_db/manage.py migrate
 ```
 
 ### Usage
@@ -83,9 +85,10 @@ python /populate_db/manage.py migrate
 The project provides different commands to handle the data. Use them with the following syntax (within the projects root folder):
 
 ```bash
-python /populate_db/manage.py <command> <option>
+python populate_db/manage.py <command> <option>
 ```
 
+* `convert_data`: Converts precipitation beta 4 data into a suitable format.
 * `export`: Export the climate database as csv file
 * `load_data <option>`: Populates the database with initial data. Use the following options as `<option>`:
 	- `A`: populate everything (stations -> temperature -> precipitation)

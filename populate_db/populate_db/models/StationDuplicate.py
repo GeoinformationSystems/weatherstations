@@ -19,7 +19,8 @@ from django.db import models
 
 class StationDuplicate(models.Model):
     # main attributes
-    duplicate_station = models.BigIntegerField(
+    duplicate_station = models.CharField(
+        max_length=11,
         default=0,
         db_index=True
     )

@@ -34,11 +34,11 @@ MAX_GAPS = 120  # maximum number of consecutive missing months
 ################################################################################
 
 COUNTRY_CODES = {
-    'path': 'data/meta/v2.country.codes',
+    'path': 'data/meta/ghcnm-countries.txt',
     'characters':
         {
             'code': [0, 2],
-            'country': [4, 60],
+            'country': [3, 65],
         },
 }
 
@@ -47,15 +47,16 @@ DATASETS = {
         {
             'stations':
                 {
-                    'path': 'data/GHCN_monthly_v2_precipitation/v2.prcp.inv',
+                    'path': 'data/GHCN_monthly_prec/ghcn-m_v4_prcp_inventory.txt',
                     'null_values': ['-999'],
                     'characters':
                         {
                             'station_id': [0, 10],
-                            'lat': [43, 48],
-                            'lng': [50, 56],
-                            'elv': [57, 61],
-                            'name': [12, 42],  # N.B. a country name can be inside
+                            'country_code' : [0, 1],
+                            'lat': [12, 19],
+                            'lng': [21, 29],
+                            'elv': [31, 36],
+                            'name': [41, 78],  # N.B. a country name can be inside
                         },
                     'pandas_characters':
                         {
@@ -64,43 +65,53 @@ DATASETS = {
                 },
             'data':
                 {
-                    'path': 'data/GHCN_monthly_v2_precipitation/v2.prcp',
+                    'path': 'data/GHCN_monthly_prec/precv4_full.csv',
                     'division_factor': 10,
-                    'null_values': ['-9999', '-8888'],
+                    'null_values': ['-9999'],
                     'characters':
                         {
                             'station_id': [0, 10],
-                            'year': [12, 15],
-                            'has_duplicates': [11, 11],
+                            'year': [11, 14],
                             '1': [16, 20],  # Jan
-                            '2': [21, 25],  # Feb
-                            '3': [26, 30],  # ...
-                            '4': [31, 35],
-                            '5': [36, 40],
-                            '6': [41, 45],
-                            '7': [46, 50],
-                            '8': [51, 55],
-                            '9': [56, 60],
-                            '10': [61, 65],
-                            '11': [66, 70],
-                            '12': [71, 75],  # Dec
+                            '2': [22, 26],  # Feb
+                            '3': [28, 32],  # ...
+                            '4': [34, 38],
+                            '5': [40, 44],
+                            '6': [46, 50],
+                            '7': [52, 56],
+                            '8': [58, 62],
+                            '9': [64, 68],
+                            '10': [70, 74],
+                            '11': [76, 80],
+                            '12': [82, 86],  # Dec
                         },
                     'pandas_characters':
                         {
                             'station_id': [0, 11],
-                            'year': [12, 16],
+                            'year': [11, 15],
                             '1': [16, 21],  # Jan
-                            '2': [21, 26],  # Feb
-                            '3': [26, 31],  # ...
-                            '4': [31, 36],
-                            '5': [36, 41],
-                            '6': [41, 46],
-                            '7': [46, 51],
-                            '8': [51, 56],
-                            '9': [56, 61],
-                            '10': [61, 66],
-                            '11': [66, 71],
-                            '12': [71, 76],  # Dec
+                            '2': [22, 27],  # Feb
+                            '3': [28, 33],  # ...
+                            '4': [34, 39],
+                            '5': [40, 45],
+                            '6': [46, 51],
+                            '7': [52, 57],
+                            '8': [58, 63],
+                            '9': [64, 69],
+                            '10': [70, 75],
+                            '11': [76, 81],
+                            '12': [82, 87],  # Dec
+                        },
+                },
+            'dataRaw':
+                {
+                    'folder': 'data/GHCN_monthly_prec/v4_raw',
+                    'characters':
+                        {
+                            'station_id': [0, 10],
+                            'year': [83, 86],
+                            'month': [87, 88],
+                            'value': [90, 95]
                         },
                 },
         },
@@ -108,14 +119,15 @@ DATASETS = {
         {
             'stations':
                 {
-                    'path': 'data/GHCN_monthly_v3_temperature/ghcnm.tavg.v3.3.0.latest.qca.inv',
+                    'path': 'data/GHCN_monthly_temp/ghcnm.tavg.v4.0.1.20240205.qcf.inv',
                     'null_values': ['-999'],
                     'characters':
                         {
                             'station_id': [0, 10],
+                            'country_code': [0, 1],
                             'lat': [12, 19],
                             'lng': [21, 29],
-                            'elv': [31, 37],
+                            'elv': [31, 36],
                             'name': [38, 68],  # N.B. a country name can be inside
                         },
                     'pandas_characters':
@@ -125,14 +137,13 @@ DATASETS = {
                 },
             'data':
                 {
-                    'path': 'data/GHCN_monthly_v3_temperature/ghcnm.tavg.v3.3.0.latest.qca.dat',
+                    'path': 'data/GHCN_monthly_temp/ghcnm.tavg.v4.0.1.20240205.qcf.dat',
                     'division_factor': 100,
                     'null_values': ['-9999', '-8888'],
                     'characters':
                         {
                             'station_id': [0, 10],
                             'year': [11, 14],
-                            'value': [15, 18],  # should always be 'TAVG'
                             '1': [19, 23],  # Jan
                             '2': [27, 31],  # Feb
                             '3': [35, 39],  # ...
@@ -164,38 +175,5 @@ DATASETS = {
                             '12': [107, 112],  # Dec
                         },
                 },
-        },
-    'precipitationV4Raw':
-        {
-            'stations':
-                {
-                    'path': 'data/metaV4/prec/ghcn-m_v4_prcp_inventory.txt',
-                    'null_values': ['99999'],
-                    'characters':
-                        {
-                            'station_id': [0, 10],
-                            'lat': [12, 19],
-                            'lng': [21, 30],
-                            'elv': [31, 36],
-                            'name': [41, 78],  # N.B. a country name can be inside
-                        },
-                    'pandas_characters':
-                        {
-                            'station_id': [0, 11]
-                        }
-                },
-            'data':
-                {
-                    'folder': '/data/GHCN_monthly_v4_precipitation_raw/',
-                    'division_factor': 10,
-                    'null_values': ['-9999', '-8888'],
-                    'characters':
-                        {
-                            'station_id': [0, 10],
-                            'year': [83, 86],
-                            'month': [87, 88],
-                            'value': [90, 95]
-                        },
-                }
         },
 }

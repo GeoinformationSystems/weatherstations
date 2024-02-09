@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Station',
             fields=[
-                ('id', models.BigIntegerField(db_index=True, primary_key=True, serialize=False)),
+                ('id', models.CharField(max_length=11, db_index=True, primary_key=True, serialize=False)),
                 ('name', models.CharField(max_length=32)),
                 ('country', models.CharField(max_length=52, null=True)),
                 ('lat', models.DecimalField(decimal_places=2, max_digits=4)),
@@ -39,7 +39,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='StationData',
             fields=[
-                ('id', models.BigIntegerField(db_index=True, primary_key=True, serialize=False)),
+                ('id', models.CharField(max_length=11, db_index=True, primary_key=True, serialize=False)),
                 ('year', models.PositiveSmallIntegerField(default='2019')),
                 ('month', models.PositiveSmallIntegerField(default='1')),
                 ('temperature', models.DecimalField(blank=True, decimal_places=2, default=None, max_digits=4, null=True)),
@@ -55,7 +55,7 @@ class Migration(migrations.Migration):
             name='StationDuplicate',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('duplicate_station', models.BigIntegerField(db_index=True, default=0)),
+                ('duplicate_station', models.CharField(max_length=11, db_index=True, default=0)),
                 ('master_station', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='master_station', to='populate_db.Station')),
             ],
         ),
