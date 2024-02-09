@@ -8,7 +8,7 @@ import org.junit.Test;
 public class WeatherStationsTest
 {
 	// Test: Weimar
-	long stationID = 61710555000L;
+	String stationID = "GMM00010488";
 	
 	// Test: time frame 1980 to 2010
 	int minYear = 1950;

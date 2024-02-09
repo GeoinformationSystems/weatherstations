@@ -71,7 +71,7 @@ public class WeatherStations {
             ResultSet results = statement.executeQuery(getAllStationsQuery());
             while (results.next()) {
                 JSONObject newStation = new JSONObject();
-                newStation.put("id", results.getLong("id"));
+                newStation.put("id", results.getString("id"));
                 newStation.put("name", results.getString("name"));
                 newStation.put("country", results.getString("country"));
                 newStation.put("lat", results.getFloat("lat"));
@@ -106,7 +106,7 @@ public class WeatherStations {
     @GET
     @Path("/getStationData")
     @Produces("application/json")
-    public String getStationData(@QueryParam("stationId") long stationId, @QueryParam("minYear") int minYear,
+    public String getStationData(@QueryParam("stationId") String stationId, @QueryParam("minYear") int minYear,
                                  @QueryParam("maxYear") int maxYear) {
         // access the database
         Connection conn = connectToDatabase();
@@ -269,8 +269,8 @@ public class WeatherStations {
         return "SELECT * FROM populate_db_station WHERE original = TRUE and complete_data_rate > 0.0";
     }
 
-    private String getStationDataQuery(long stationId, int minYear, int maxYear) {
-        return "SELECT * FROM populate_db_stationdata WHERE station_id=" + stationId + " AND year>=" + minYear
+    private String getStationDataQuery(String stationId, int minYear, int maxYear) {
+        return "SELECT * FROM populate_db_stationdata WHERE station_id='" + stationId + "' AND year>=" + minYear
                 + " AND year<" + maxYear;
     }
 }
