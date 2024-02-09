@@ -1,5 +1,5 @@
 data/
-populate_db/migrations
+populate_db/populate_db/migrations
 *.pyc
 *.iml
 
@@ -13,4 +13,4 @@ populate_db/venv
 populate_db/env
 populate_db/populate_db/management/commands/stationsdata.db
 populate_db/populate_db/management/commands/testLargeFileProcess.py
-venv/
+env/

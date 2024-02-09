@@ -122,6 +122,7 @@ This project uses a collection of Java libraries:
 * com.sun.jersey 1.19 - GPL 1.1
 * junit 4.13.1 - EPL 1.0
 * org.postgresql 42.5.0 - BSD 2-clause
+* javax.xml.bind 2.3.1 - CDDL 1.1
 
 ## Python Libraries
 
