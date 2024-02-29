@@ -11,8 +11,8 @@ public class WeatherStationsTest
 	String stationID = "GMM00010488";
 	
 	// Test: time frame 1980 to 2010
-	int minYear = 1950;
-	int maxYear = 1980;
+	int minYear = 1980;
+	int maxYear = 2010;
 	
 	@Test
 	public void testAllStations() throws ParseException, IOException

@@ -22,7 +22,7 @@ MAX_GAP = 10000
 
 # size of consecutive database queries that are executed at once
 # optimal: [1000 .. 5000]
-BULK_SIZE = 1000
+BULK_SIZE = 5000
 
 # Only include stations with the following characteristics:
 MIN_COVERAGE = 0.75  # at least x % coverage
@@ -119,7 +119,7 @@ DATASETS = {
         {
             'stations':
                 {
-                    'path': 'data/GHCN_monthly_temp/ghcnm.tavg.v4.0.1.20240205.qcf.inv',
+                    'path': 'data/GHCN_monthly_temp/ghcnm.tavg.v4.0.1.latest.qcf.inv',
                     'null_values': ['-999'],
                     'characters':
                         {
@@ -137,7 +137,7 @@ DATASETS = {
                 },
             'data':
                 {
-                    'path': 'data/GHCN_monthly_temp/ghcnm.tavg.v4.0.1.20240205.qcf.dat',
+                    'path': 'data/GHCN_monthly_temp/ghcnm.tavg.v4.0.1.latest.qcf.dat',
                     'division_factor': 100,
                     'null_values': ['-9999', '-8888'],
                     'characters':
