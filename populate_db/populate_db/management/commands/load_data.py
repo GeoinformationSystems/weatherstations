@@ -419,7 +419,8 @@ class Command(BaseCommand):
         # sort out all duplicate stations data and merge with master station
         for duplicate_station in StationDuplicate.objects.all():
             station_current_nr += 1
-            print ('\nhandling Station Data object: ' + str(duplicate_station) + ' (' + str(station_current_nr) + ' of ' + str(station_duplicates_count) + ')')
+            if station_current_nr % BULK_SIZE == 0:
+                print ('\nhandling Station Data object: ' + str(duplicate_station) + ' (' + str(station_current_nr) + ' of ' + str(station_duplicates_count) + ')')
             try:
                 # merge every single duplicate date set with its master date set
                 for duplicate_station_data in StationData.objects.filter(station=duplicate_station.duplicate_station):

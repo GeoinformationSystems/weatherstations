@@ -67,7 +67,7 @@ DATASETS = {
                 {
                     'path': 'data/GHCN_monthly_prec/precv4_full.csv',
                     'division_factor': 10,
-                    'null_values': ['-9999'],
+                    'null_values': ['-9999','-1','-300'],
                     'characters':
                         {
                             'station_id': [0, 10],
