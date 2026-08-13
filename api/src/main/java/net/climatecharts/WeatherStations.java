@@ -7,6 +7,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -14,10 +15,11 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.InputStream;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Weatherstations API for ClimateCharts server. Answers requests from the
@@ -29,26 +31,43 @@ import java.util.Collections;
 @Path("")
 public class WeatherStations {
     /**
-     * CONSTANTS: Database connection data
+     * SQL queries. Parameters use ?-placeholders and are bound via
+     * PreparedStatement to avoid SQL injection (stationId comes from a
+     * query parameter).
      */
+    private static final String SQL_ALL_STATIONS =
+        "SELECT * FROM populate_db_station"
+        + " WHERE original = TRUE AND complete_data_rate > 0.0";
+    private static final String SQL_STATION_DATA =
+        "SELECT * FROM populate_db_stationdata"
+        + " WHERE station_id = ? AND year >= ? AND year < ?";
 
-    private static final String DB_HOST = "127.0.0.1";
-    private static final String DB_NAME = "climatecharts_weatherstations";
-    private static final String DB_USER = "postgres";
-    private static final String DB_PSWD = "postgres";
+    private static final Logger log = Logger.getLogger(WeatherStations.class.getName());
+
+    /**
+     * Database connection parameters are read at request time from the
+     * servlet context (configured in web.xml "context-param" entries
+     * and overridable per deployment via Tomcat context.xml).
+     */
 
     @Context
     ServletContext servletContext;
 
     @GET
-    @Produces({MediaType.TEXT_HTML})
-    public InputStream viewHome() {
+    @Produces(MediaType.TEXT_HTML)
+    public Response viewHome() {
+        File indexFile = new File(servletContext.getRealPath("/"), "index.html");
+        if (!indexFile.isFile()) {
+            log.warning("index.html not found at " + indexFile.getAbsolutePath());
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
         try {
-            String base = servletContext.getRealPath("/");
-            File f = new File(String.format("%s/%s", base, "index.html"));
-            return new FileInputStream(f);
+            // Jersey closes the stream after writing the response.
+            return Response.ok(new FileInputStream(indexFile)).build();
         } catch (FileNotFoundException e) {
-            return null;
+            // isFile() above should have caught this — defensive only.
+            log.warning("index.html disappeared between check and read: " + e.getMessage());
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
     }
 
@@ -60,17 +79,12 @@ public class WeatherStations {
     @Path("/getAllStations")
     @Produces("application/json")
     public String getAllStations() {
-        // access the database
-        Connection conn = connectToDatabase();
-
-        // get all stations
-        JSONArray weatherstations = new JSONArray();
-
-        try {
-            Statement statement = conn.createStatement();
-            ResultSet results = statement.executeQuery(getAllStationsQuery());
+        var weatherstations = new JSONArray();
+        try (var conn = connectToDatabase();
+             var statement = conn.createStatement();
+             var results = statement.executeQuery(SQL_ALL_STATIONS)) {
             while (results.next()) {
-                JSONObject newStation = new JSONObject();
+                var newStation = new JSONObject();
                 newStation.put("id", results.getString("id"));
                 newStation.put("name", results.getString("name"));
                 newStation.put("country", results.getString("country"));
@@ -84,22 +98,10 @@ public class WeatherStations {
                 newStation.put("largest_gap", results.getInt("largest_gap"));
                 weatherstations.put(newStation);
             }
-            results.close();
-            statement.close();
-            conn.close();
         } catch (SQLException e) {
-            System.err.println("Error in execution of the SQL Statement");
-            System.err.println(e.getMessage());
-        } finally {
-            try {
-               if(conn!=null)
-                  conn.close();
-            } catch (SQLException e) {
-               e.printStackTrace();
-            }
+            log.log(Level.SEVERE, "Failed to load stations", e);
+            throw new IllegalStateException("Failed to load stations", e);
         }
-
-        // format them into a JSON string and return
         return weatherstations.toString();
     }
 
@@ -108,8 +110,11 @@ public class WeatherStations {
     @Produces("application/json")
     public String getStationData(@QueryParam("stationId") String stationId, @QueryParam("minYear") int minYear,
                                  @QueryParam("maxYear") int maxYear) {
-        // access the database
-        Connection conn = connectToDatabase();
+        if (maxYear <= minYear) {
+            throw new IllegalArgumentException(
+                "maxYear must be greater than minYear (got minYear=" + minYear
+                + ", maxYear=" + maxYear + ")");
+        }
 
         /*
          * data structure: { numYears: number of years prec: for each dataset [ for each
@@ -123,69 +128,56 @@ public class WeatherStations {
         // use 'Float' instead of 'float' to have 'null' as the default value instead of
         // '0.0'
         // --> distinguish between 'null' and '0.0'
-        Float[][] rawPrecData = new Float[12][numYears];
-        Float[][] rawTempData = new Float[12][numYears];
+        var rawPrecData = new Float[12][numYears];
+        var rawTempData = new Float[12][numYears];
 
-        try {
-            Statement statement = conn.createStatement();
-            ResultSet results = statement.executeQuery(getStationDataQuery(stationId, minYear, maxYear));
-            while (results.next()) {
-                int year = results.getInt("year");
-                int month = results.getInt("month");
-                Float temp = results.getFloat("temperature");
-                if (results.wasNull())
-                    temp = null;
-                Float prec = results.getFloat("precipitation");
-                if (results.wasNull())
-                    prec = null;
+        try (var conn = connectToDatabase();
+             var statement = conn.prepareStatement(SQL_STATION_DATA)) {
+            statement.setString(1, stationId);
+            statement.setInt(2, minYear);
+            statement.setInt(3, maxYear);
+            try (var results = statement.executeQuery()) {
+                while (results.next()) {
+                    int year = results.getInt("year");
+                    int month = results.getInt("month");
+                    Float temp = results.getFloat("temperature");
+                    if (results.wasNull())
+                        temp = null;
+                    Float prec = results.getFloat("precipitation");
+                    if (results.wasNull())
+                        prec = null;
 
-                int yearIdx = year - minYear;
-                int monthIdx = month - 1;
-
-                rawPrecData[monthIdx][yearIdx] = prec;
-                rawTempData[monthIdx][yearIdx] = temp;
-
+                    rawPrecData[month - 1][year - minYear] = prec;
+                    rawTempData[month - 1][year - minYear] = temp;
+                }
             }
-            results.close();
-            statement.close();
-            conn.close();
         } catch (SQLException e) {
-            System.err.println("Error in execution of the SQL Statement");
-            System.err.println(e.getMessage());
-        } finally {
-            try {
-               if(conn!=null)
-                  conn.close();
-            } catch (SQLException e) {
-               e.printStackTrace();
-            }
+            log.log(Level.SEVERE, "Failed to load data for station " + stationId, e);
+            throw new IllegalStateException(
+                "Failed to load data for station " + stationId, e);
         }
 
         // create final JSON object structure
-        JSONArray precData = new JSONArray();
-        JSONArray tempData = new JSONArray();
+        var precData = new JSONArray();
+        var tempData = new JSONArray();
 
         // calculate means and number of gaps
         // for each month
         for (int monthIdx = 0; monthIdx < 12; monthIdx++) {
             // for each dataset
             for (int ds = 0; ds < 2; ds++) {
-                Float[] yearlyValues;
-                JSONArray outputData;
-                if (ds == 0) // temperature
-                {
-                    yearlyValues = rawTempData[monthIdx];
-                    outputData = tempData;
-                } else // precipitation
-                {
-                    yearlyValues = rawPrecData[monthIdx];
-                    outputData = precData;
-                }
+                // 0 = temperature, 1 = precipitation
+                var series = switch (ds) {
+                    case 0 -> new MonthData(rawTempData[monthIdx], tempData);
+                    default -> new MonthData(rawPrecData[monthIdx], precData);
+                };
+                Float[] yearlyValues = series.yearlyValues();
+                JSONArray outputData = series.outputData();
 
                 // sum up values for each year in this month
                 // count the gaps and values to calculate mean and determine the quality
                 float sum = 0.0f;
-                ArrayList<Float> median_calculations_list = new ArrayList<>();
+                var median_calculations_list = new ArrayList<Float>();
                 int numValues = 0;
                 int numGaps = 0;
                 for (int yearIdx = 0; yearIdx < numYears; yearIdx++) {
@@ -221,7 +213,7 @@ public class WeatherStations {
                 }
 
                 // write data
-                JSONObject thisMonth = new JSONObject();
+                var thisMonth = new JSONObject();
                 thisMonth.put("rawData", yearlyValues);
                 thisMonth.put("mean", mean);
                 thisMonth.put("median", median);
@@ -232,7 +224,7 @@ public class WeatherStations {
             }
         }
 
-        JSONObject stationData = new JSONObject();
+        var stationData = new JSONObject();
         stationData.put("numYears", numYears);
         stationData.put("minYear", minYear);
         stationData.put("maxYear", maxYear);
@@ -246,31 +238,44 @@ public class WeatherStations {
     /**
      * Helper functions
      */
+    private String dbConfig(String key) {
+        String value = servletContext.getInitParameter(key);
+        if (value == null) {
+            log.severe("Missing required <context-param>: " + key);
+            throw new IllegalStateException(
+                "Missing required <context-param>: " + key
+                + ". Configure it in web.xml or override via Tomcat context.xml.");
+        }
+        return value;
+    }
+
     private Connection connectToDatabase() {
-        Connection conn = null;
+        String url = String.format("jdbc:postgresql://%s:%s/%s",
+            dbConfig("db.host"),
+            dbConfig("db.port"),
+            dbConfig("db.name"));
+        String user = dbConfig("db.user");
+        String password = dbConfig("db.password");
+        if (password.isEmpty()) {
+            throw new IllegalStateException(
+                "db.password must not be empty. "
+                + "Set it in web.xml or override via Tomcat context.xml.");
+        }
         try {
             Class.forName("org.postgresql.Driver");
-            String url = "jdbc:postgresql://" + DB_HOST + "/" + DB_NAME;
-            conn = DriverManager.getConnection(url, DB_USER, DB_PSWD);
+            return DriverManager.getConnection(url, user, password);
         } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            System.exit(1);
+            log.log(Level.SEVERE, "PostgreSQL JDBC driver not found", e);
+            throw new IllegalStateException("PostgreSQL JDBC driver not found", e);
         } catch (SQLException e) {
-            e.printStackTrace();
-            System.exit(2);
+            log.log(Level.SEVERE, "Cannot connect to database at " + url, e);
+            throw new IllegalStateException(
+                "Cannot connect to database at " + url, e);
         }
-        return conn;
     }
 
-    private String getAllStationsQuery() {
-        // select all stations, which are
-        //      * master stations => original = TRUE
-        //      * where at least one single entry with both temp and prec exists => complete_data_rate > 0.0
-        return "SELECT * FROM populate_db_station WHERE original = TRUE and complete_data_rate > 0.0";
-    }
-
-    private String getStationDataQuery(String stationId, int minYear, int maxYear) {
-        return "SELECT * FROM populate_db_stationdata WHERE station_id='" + stationId + "' AND year>=" + minYear
-                + " AND year<" + maxYear;
-    }
+    /** Bundles the monthly values and the output JSON array that should
+     *  receive them — used as the return type of a switch expression in
+     *  {@link #getStationData}. */
+    private record MonthData(Float[] yearlyValues, JSONArray outputData) {}
 }

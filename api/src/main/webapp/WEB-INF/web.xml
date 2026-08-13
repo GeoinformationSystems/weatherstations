@@ -7,7 +7,36 @@
 	<welcome-file-list>
 		<welcome-file>index.html</welcome-file>
 	</welcome-file-list>
-	
+
+	<!--
+		Database connection parameters.
+		Defaults below are placeholders for local development.
+		Override per deployment via Tomcat context.xml, e.g.:
+			<Context>
+				<Parameter name="db.password" value="..." override="true"/>
+			</Context>
+	-->
+	<context-param>
+		<param-name>db.host</param-name>
+		<param-value>127.0.0.1</param-value>
+	</context-param>
+	<context-param>
+		<param-name>db.port</param-name>
+		<param-value>5432</param-value>
+	</context-param>
+	<context-param>
+		<param-name>db.name</param-name>
+		<param-value>climatecharts_weatherstations</param-value>
+	</context-param>
+	<context-param>
+		<param-name>db.user</param-name>
+		<param-value>postgres</param-value>
+	</context-param>
+	<context-param>
+		<param-name>db.password</param-name>
+		<param-value></param-value>
+	</context-param>
+
 	<filter>
 	  <filter-name>CorsFilter</filter-name>
 	  <filter-class>org.apache.catalina.filters.CorsFilter</filter-class>

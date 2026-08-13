@@ -19,16 +19,6 @@
 			<artifactId>json</artifactId>
 			<version>20231013</version>
 		</dependency>
-		<dependency>
-			<groupId>commons-io</groupId>
-			<artifactId>commons-io</artifactId>
-			<version>2.11.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.httpcomponents</groupId>
-			<artifactId>httpclient</artifactId>
-			<version>4.5.13</version>
-		</dependency>
 		<!-- Jersey dependencies -->
 		<dependency>
 			<groupId>com.sun.jersey</groupId>
@@ -63,6 +53,16 @@
 			<artifactId>jaxb-api</artifactId>
 			<version>2.3.1</version>
 		</dependency>
+		<!-- JAXB runtime implementation (removed from JDK since Java 11).
+		     Required by Jersey 1.x to generate the WADL description of the REST API.
+		     Glassfish's jaxb-runtime bundles jaxb-impl + jaxb-core + istack-commons-runtime,
+		     which avoids transitive-dependency surprises with the split Sun JAXB jars. -->
+		<dependency>
+			<groupId>org.glassfish.jaxb</groupId>
+			<artifactId>jaxb-runtime</artifactId>
+			<version>2.3.1</version>
+			<scope>runtime</scope>
+		</dependency>
 	</dependencies>
 	<build>
 		<finalName>weatherstations-api</finalName>
@@ -72,8 +72,7 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.10.1</version>
 				<configuration>
-					<source>11</source>
-					<target>11</target>
+					<release>17</release>
 				</configuration>
 			</plugin>
 			<plugin>
