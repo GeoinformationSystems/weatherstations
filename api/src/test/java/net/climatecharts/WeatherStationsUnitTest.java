@@ -3,18 +3,25 @@ package net.climatecharts;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 
 import jakarta.servlet.ServletContext;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.anyInt;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -169,5 +176,103 @@ public class WeatherStationsUnitTest
 		assertTrue("SQL targets populate_db_station table", sql.contains("populate_db_station"));
 		assertTrue("SQL filters master stations", sql.contains("original = TRUE"));
 		assertTrue("SQL filters for usable data", sql.contains("complete_data_rate > 0.0"));
+	}
+
+	// ---------- connectToDatabase() error paths ----------
+	// These tests use a fresh WeatherStations WITHOUT overriding connectToDatabase,
+	// so the real method runs. We mock DriverManager statically (Mockito 5.x has
+	// the inline mock-maker as default, so no extra artifact needed).
+
+	@Test
+	public void dbConfig_throwsWhenContextParamMissing()
+	{
+		// Fresh servlet-context mock — getInitParameter returns null for everything.
+		ServletContext ctx = mock(ServletContext.class);
+		WeatherStations realWs = new WeatherStations();
+		realWs.servletContext = ctx;
+
+		try {
+			realWs.connectToDatabase();
+			fail("Expected IllegalStateException for missing <context-param>");
+		} catch (IllegalStateException e) {
+			// First key queried is db.host, so that's what fails first.
+			assertTrue("error names the missing key",
+				e.getMessage().contains("db.host"));
+			assertTrue("error mentions the fix",
+				e.getMessage().contains("Configure it in web.xml"));
+		}
+	}
+
+	@Test
+	public void connectToDatabase_throwsWhenPasswordIsEmpty()
+	{
+		// Reuse the stubbed servlet-context from setUp but override just the password.
+		when(servletContext.getInitParameter("db.password")).thenReturn("");
+
+		WeatherStations realWs = new WeatherStations();
+		realWs.servletContext = servletContext;
+
+		try {
+			realWs.connectToDatabase();
+			fail("Expected IllegalStateException for empty password");
+		} catch (IllegalStateException e) {
+			assertTrue("error mentions empty password",
+				e.getMessage().contains("db.password must not be empty"));
+		}
+	}
+
+	@Test
+	public void connectToDatabase_throwsOnSqlException()
+	{
+		// Construct the exception OUTSIDE the mockStatic block: SQLException's
+		// constructor calls DriverManager.getLogWriter(), which would be
+		// intercepted as a nested stubbing attempt by Mockito.
+		SQLException simulatedFailure = new SQLException("connection refused");
+
+		try (MockedStatic<DriverManager> dm = mockStatic(DriverManager.class)) {
+			dm.when(() -> DriverManager.getConnection(anyString(), anyString(), anyString()))
+				.thenThrow(simulatedFailure);
+
+			WeatherStations realWs = new WeatherStations();
+			realWs.servletContext = servletContext;
+
+			try {
+				realWs.connectToDatabase();
+				fail("Expected IllegalStateException for SQL connection failure");
+			} catch (IllegalStateException e) {
+				assertTrue("error mentions connection failure",
+					e.getMessage().contains("Cannot connect to database"));
+				assertTrue("error includes the URL for debugging",
+					e.getMessage().contains("localhost:5432/test"));
+			}
+		}
+	}
+
+	@Test
+	public void connectToDatabase_returnsConnectionOnSuccess() throws SQLException
+	{
+		Connection mockConn = mock(Connection.class);
+
+		try (MockedStatic<DriverManager> dm = mockStatic(DriverManager.class)) {
+			dm.when(() -> DriverManager.getConnection(anyString(), anyString(), anyString()))
+				.thenReturn(mockConn);
+
+			WeatherStations realWs = new WeatherStations();
+			realWs.servletContext = servletContext;
+
+			Connection conn = realWs.connectToDatabase();
+			assertSame("should return the mocked connection", mockConn, conn);
+
+			// Verify the JDBC URL has the expected host:port/database format.
+			ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
+			dm.verify(() -> DriverManager.getConnection(
+				urlCaptor.capture(), anyString(), anyString()));
+			String url = urlCaptor.getValue();
+			assertEquals("jdbc:postgresql://localhost:5432/test", url);
+
+			// Verify credentials are passed through unchanged.
+			dm.verify(() -> DriverManager.getConnection(
+				anyString(), eq("user"), eq("pw")));
+		}
 	}
 }
