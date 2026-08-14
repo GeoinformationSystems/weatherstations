@@ -6,18 +6,64 @@ A database deployment tool for static weather stations data and API access for [
 
 ## /api
 
-The project is build for a servlet engine like Tomcat.
+The project is build on Jakarta EE 9 for a servlet engine like Tomcat 10. **Java 17 or newer** is required to build and run.
 
-Use the IDE of your choice (recommend Eclipse) to edit the files in the folder `/api`. To build the war file use on the command line `mvn clean install` or the IDEs capabilities. Copy the weatherstations-api.war from folder /api/target to the servlet engine of your choice.
+### Building
+
+The project ships with the Maven Wrapper, so a system-wide Maven installation is not needed.
+
+```bash
+cd api
+./mvnw clean package        # Linux / macOS / Git Bash
+mvnw.cmd clean package      # Windows cmd
+```
+
+The resulting WAR is at `api/target/weatherstations-api.war`.
+
+### Running
+
+Deploy the WAR to a Jakarta-EE-compatible servlet container. Tested with:
+
+- Apache Tomcat 10.1.x (Jakarta EE 9 / Servlet 5.0)
+- (Older versions of this codebase, pre-Jakarta-migration, supported Tomcat 9.)
+
+For Tomcat 10 the `javax.*` → `jakarta.*` namespace migration has been completed; the WAR **will not** run on Tomcat 9 any more.
+
+### Database configuration
+
+Database connection parameters are read at request time from the servlet context. Defaults are set in `src/main/webapp/WEB-INF/web.xml` as `<context-param>` entries. For production deployments, override per environment via Tomcat's `context.xml`:
+
+```xml
+<!-- /etc/tomcat10/Catalina/localhost/weatherstations-api.xml -->
+<Context>
+    <Parameter name="db.host"     value="127.0.0.1"      override="false"/>
+    <Parameter name="db.port"     value="5432"           override="false"/>
+    <Parameter name="db.name"     value="climatecharts_weatherstations" override="false"/>
+    <Parameter name="db.user"     value="..." override="false"/>
+    <Parameter name="db.password" value="..." override="false"/>
+</Context>
+```
+
+Note: the `<Parameter>` elements must use `override="false"` (not Tomcat's default of `true`) so the per-deployment values take precedence over the defaults in `web.xml`.
 
 ### Usage
 
-Call the url http://server_ip:server_port/weaterstations-api/ for a short overview of the capabilities of the servlet.
+Open `http://server:port/weatherstations-api/` in a browser for a short overview page.
+
 * `/getAllStations`: returns a JSON file with all available stations
-* `/getStationData`: returns a JSON file with available temperature and precipitation data for a certain station within a given timer period. Use the follwing parameters:
+* `/getStationData`: returns a JSON file with available temperature and precipitation data for a certain station within a given time period. Use the following parameters:
 	- `stationId`: on of the IDs from getAllStations
 	- `minYear`: minimum year for the time period
 	- `maxYear`: maximum year for the time period
+
+### Testing
+
+```bash
+./mvnw test         # unit tests only
+./mvnw verify       # unit tests + WAR packaging
+```
+
+The project ships with nine unit tests covering SQL-injection protection, year-range validation, and the JSON structure of both endpoints. Tests use Mockito and run without a live PostgreSQL instance.
 
 ## /populate_db
 
@@ -118,14 +164,24 @@ The WeatherStations project is lincensed under the Apache License 2.0.
 
 This project uses a collection of Java libraries:
 
-* javax.servlet 4.0.1 - GPL2
-* org.json 20220924 - JSON
-* commons-io 2.11.0 - Apache 2.0
-* org.apache.httpcomponents 4.5.13 - Apache 2.0
-* com.sun.jersey 1.19 - GPL 1.1
-* junit 4.13.1 - EPL 1.0
-* org.postgresql 42.5.0 - BSD 2-clause
-* javax.xml.bind 2.3.1 - CDDL 1.1
+| Library | Version | License |
+|---|---|---|
+| `jakarta.servlet:jakarta.servlet-api` | 5.0.0 | EPL 2.0 + GPL2 (classpath exception) |
+| `jakarta.ws.rs:jakarta.ws.rs-api` | 3.1.0 | EPL 2.0 + GPL2 (classpath exception) |
+| `jakarta.xml.bind:jakarta.xml.bind-api` | 3.0.1 | Eclipse Distribution License 1.0 |
+| `org.glassfish.jersey.core:jersey-server` | 3.1.5 | EPL 2.0 + GPL2 (classpath exception) |
+| `org.glassfish.jersey.containers:jersey-container-servlet` | 3.1.5 | EPL 2.0 + GPL2 (classpath exception) |
+| `org.glassfish.jaxb:jaxb-runtime` | 3.0.2 | Eclipse Distribution License 1.0 |
+| `org.json:json` | 20231013 | MIT |
+| `org.postgresql:postgresql` | 42.7.2 | BSD-2-Clause |
+
+**Test-only dependencies:**
+
+| Library | Version | License |
+|---|---|---|
+| `junit:junit` | 4.13.1 | EPL 1.0 |
+| `org.mockito:mockito-core` | 5.11.0 | MIT |
+
 
 ## Python Libraries
 
