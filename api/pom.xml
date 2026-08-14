@@ -7,33 +7,51 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>war</packaging>
 	<name>WeatherStations API for the ClimateCharts Web Application</name>
+
+	<!-- Jersey 3.1.x BOM manages the versions of all org.glassfish.jersey:*
+	     artifacts. Targeting Jakarta EE 9 (Servlet 5.0, JAX-RS 3.1), which
+	     runs on both Tomcat 10.0 and 10.1. -->
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.glassfish.jersey</groupId>
+				<artifactId>jersey-bom</artifactId>
+				<version>3.1.5</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<dependencies>
+		<!-- Jakarta Servlet API (provided by Tomcat 10). -->
 		<dependency>
-			<groupId>javax.servlet</groupId>
-			<artifactId>javax.servlet-api</artifactId>
-			<version>4.0.1</version>
+			<groupId>jakarta.servlet</groupId>
+			<artifactId>jakarta.servlet-api</artifactId>
+			<version>5.0.0</version>
 			<scope>provided</scope>
+		</dependency>
+		<!-- Jakarta RESTful Web Services API (transitive from jersey-server, but
+		     pinned explicitly for clarity). -->
+		<dependency>
+			<groupId>org.glassfish.jersey.core</groupId>
+			<artifactId>jersey-server</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.glassfish.jersey.containers</groupId>
+			<artifactId>jersey-container-servlet</artifactId>
+		</dependency>
+		<!-- HK2 injection manager. In Jersey 3.x this is no longer pulled in
+		     transitively by jersey-server; without it, Jersey throws
+		     "InjectionManagerFactory not found" at servlet init. -->
+		<dependency>
+			<groupId>org.glassfish.jersey.inject</groupId>
+			<artifactId>jersey-hk2</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.json</groupId>
 			<artifactId>json</artifactId>
 			<version>20231013</version>
-		</dependency>
-		<!-- Jersey dependencies -->
-		<dependency>
-			<groupId>com.sun.jersey</groupId>
-			<artifactId>jersey-bundle</artifactId>
-			<version>1.19</version>
-		</dependency>
-		<dependency>
-			<groupId>com.sun.jersey</groupId>
-			<artifactId>jersey-server</artifactId>
-			<version>1.19</version>
-		</dependency>
-		<dependency>
-			<groupId>com.sun.jersey</groupId>
-			<artifactId>jersey-core</artifactId>
-			<version>1.19</version>
 		</dependency>
 		<!-- Test dependencies -->
 		<dependency>
@@ -48,25 +66,25 @@
 			<version>5.11.0</version>
 			<scope>test</scope>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 			<version>42.7.2</version>
 		</dependency>
+		<!-- Jakarta XML Binding API (JAXB, removed from JDK since Java 11).
+		     Required by Jersey to generate the WADL description. -->
 		<dependency>
-			<groupId>javax.xml.bind</groupId>
-			<artifactId>jaxb-api</artifactId>
-			<version>2.3.1</version>
+			<groupId>jakarta.xml.bind</groupId>
+			<artifactId>jakarta.xml.bind-api</artifactId>
+			<version>3.0.1</version>
 		</dependency>
 		<!-- JAXB runtime implementation (removed from JDK since Java 11).
-		     Required by Jersey 1.x to generate the WADL description of the REST API.
-		     Glassfish's jaxb-runtime bundles jaxb-impl + jaxb-core + istack-commons-runtime,
-		     which avoids transitive-dependency surprises with the split Sun JAXB jars. -->
+		     org.glassfish.jaxb:jaxb-runtime bundles jaxb-impl + jaxb-core +
+		     istack-commons-runtime. -->
 		<dependency>
 			<groupId>org.glassfish.jaxb</groupId>
 			<artifactId>jaxb-runtime</artifactId>
-			<version>2.3.1</version>
+			<version>3.0.2</version>
 			<scope>runtime</scope>
 		</dependency>
 	</dependencies>
