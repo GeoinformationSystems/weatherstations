@@ -249,7 +249,11 @@ public class WeatherStations {
         return value;
     }
 
-    private Connection connectToDatabase() {
+    /**
+     * Package-private to allow unit tests to override and inject a mocked
+     * {@link Connection} without needing a running PostgreSQL instance.
+     */
+    Connection connectToDatabase() {
         String url = String.format("jdbc:postgresql://%s:%s/%s",
             dbConfig("db.host"),
             dbConfig("db.port"),
